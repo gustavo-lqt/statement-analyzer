@@ -1,29 +1,40 @@
 from __future__ import annotations
 
 import csv
-from io import BytesIO, TextIOWrapper
+from io import BytesIO
 from typing import Iterator
 
 from app.models import ArquivoVazio, EncodingInvalido, FichaBanco, LinhaCrua
 
 
 class _LinhasCapturadas:
-    def __init__(self, stream: TextIOWrapper) -> None:
-        self.stream = stream
+    def __init__(self, content: bytes, encoding: str) -> None:
+        self.stream = content
+        self.encoding = encoding
         self.current_record: list[str] = []
+        self.record_has_invalid_encoding = False
 
     def __iter__(self) -> _LinhasCapturadas:
         return self
 
     def __next__(self) -> str:
-        line = next(self.stream)
+        raw_line = self.stream.readline()
+        if not raw_line:
+            raise StopIteration
+        try:
+            line = raw_line.decode(self.encoding)
+        except UnicodeDecodeError:
+            line = raw_line.decode(self.encoding, errors="replace")
+            self.record_has_invalid_encoding = True
         self.current_record.append(line)
         return line
 
-    def take_record(self) -> str:
+    def take_record(self) -> tuple[str, bool]:
         record = "".join(self.current_record).rstrip("\r\n")
+        has_invalid_encoding = self.record_has_invalid_encoding
         self.current_record.clear()
-        return record
+        self.record_has_invalid_encoding = False
+        return record, has_invalid_encoding
 
 
 def ler(conteudo: bytes, ficha: FichaBanco) -> Iterator[LinhaCrua]:
@@ -32,17 +43,15 @@ def ler(conteudo: bytes, ficha: FichaBanco) -> Iterator[LinhaCrua]:
         raise ArquivoVazio()
 
     def records() -> Iterator[LinhaCrua]:
-        text_stream = TextIOWrapper(
-            BytesIO(conteudo), encoding=ficha.encoding, errors="strict", newline=""
-        )
-        source = _LinhasCapturadas(text_stream)
+        source = _LinhasCapturadas(BytesIO(conteudo), ficha.encoding)
         reader = csv.reader(source, delimiter=ficha.delimitador, strict=True)
         try:
             header = next(reader)
         except StopIteration as error:
             raise ArquivoVazio() from error
-        except UnicodeDecodeError as error:
-            raise EncodingInvalido() from error
+        _header_raw, header_has_invalid_encoding = source.take_record()
+        if header_has_invalid_encoding:
+            raise EncodingInvalido()
         header = [column.strip() for column in header]
         header_line_count = reader.line_num
 
@@ -53,16 +62,18 @@ def ler(conteudo: bytes, ficha: FichaBanco) -> Iterator[LinhaCrua]:
                 values = next(reader)
             except StopIteration:
                 return
-            except UnicodeDecodeError as error:
-                raise EncodingInvalido() from error
             except csv.Error:
-                raw = source.take_record()
+                raw, has_invalid_encoding = source.take_record()
                 header_line_count = max(reader.line_num, header_line_count + 1)
-                yield LinhaCrua(start_line, raw, {}, "LINHA_TRUNCADA")
+                reason = "ENCODING_INVALIDO" if has_invalid_encoding else "LINHA_TRUNCADA"
+                yield LinhaCrua(start_line, raw, {}, reason)
                 continue
 
-            raw = source.take_record()
+            raw, has_invalid_encoding = source.take_record()
             header_line_count = reader.line_num
+            if has_invalid_encoding:
+                yield LinhaCrua(start_line, raw, {}, "ENCODING_INVALIDO")
+                continue
             if not values:
                 continue
 
