@@ -100,6 +100,7 @@ def create_app(database_path: str | None = None) -> FastAPI:
             banco,
             created_at,
             initial_balance,
+            saldo_inicial_centavos is None,
             leitura,
         )
         saved = database.obter_extrato(extract_id, limit=1, offset=0)
@@ -201,7 +202,7 @@ def create_app(database_path: str | None = None) -> FastAPI:
     def consultar_dias_no_negativo(extrato_id: int) -> dict[str, Any]:
         items, initial = obter_contexto_consulta(extrato_id)
         extract = application.state.database.obter_extrato(extrato_id, limit=1, offset=0)
-        result = dias_no_negativo(items, initial, extract.saldo_inicial_centavos == 0)
+        result = dias_no_negativo(items, initial, extract.saldo_inicial_assumido)
         return asdict(result)
 
     @application.get("/extratos/{extrato_id}/repetidos")
