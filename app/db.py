@@ -40,6 +40,7 @@ class Database:
                 banco TEXT NOT NULL,
                 criado_em TEXT NOT NULL,
                 saldo_inicial_centavos INTEGER NOT NULL DEFAULT 0,
+                saldo_inicial_assumido INTEGER NOT NULL DEFAULT 1,
                 total_linhas INTEGER NOT NULL,
                 aceitos INTEGER NOT NULL,
                 rejeitados INTEGER NOT NULL
@@ -62,6 +63,14 @@ class Database:
                 ON lancamento(extrato_id, data);
             """
         )
+        extract_columns = {
+            row["name"]
+            for row in self._connection.execute("PRAGMA table_info(extrato)").fetchall()
+        }
+        if "saldo_inicial_assumido" not in extract_columns:
+            self._connection.execute(
+                "ALTER TABLE extrato ADD COLUMN saldo_inicial_assumido INTEGER NOT NULL DEFAULT 1"
+            )
 
     def close(self) -> None:
         with self._lock:
@@ -73,6 +82,7 @@ class Database:
         banco: str,
         criado_em: str,
         saldo_inicial_centavos: int,
+        saldo_inicial_assumido: bool,
         resultado: ResultadoLeitura,
     ) -> int:
         with self._lock:
@@ -82,13 +92,14 @@ class Database:
                 cursor.execute(
                     """INSERT INTO extrato
                     (nome_arquivo, banco, criado_em, saldo_inicial_centavos,
-                     total_linhas, aceitos, rejeitados)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                     saldo_inicial_assumido, total_linhas, aceitos, rejeitados)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
                         nome_arquivo,
                         banco,
                         criado_em,
                         saldo_inicial_centavos,
+                        int(saldo_inicial_assumido),
                         resultado.total_linhas,
                         len(resultado.lancamentos),
                         len(resultado.recusas),
@@ -166,6 +177,7 @@ class Database:
             row["banco"],
             row["criado_em"],
             row["saldo_inicial_centavos"],
+            bool(row["saldo_inicial_assumido"]),
             row["total_linhas"],
             row["aceitos"],
             row["rejeitados"],
