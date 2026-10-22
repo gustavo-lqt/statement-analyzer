@@ -10,7 +10,7 @@
 | **Disciplina** | Bootcamp III — Turma B — CEUB — 2026/2 |
 | **Repositório** | [statement-analyzer](https://github.com/gustavo-lqt/statement-analyzer) |
 | **Stack** | Python 3.12 · FastAPI · SQLite · pytest · Docker |
-| **Versão** | v1.1 — 11/09/2026 |
+| **Versão** | v1.2 — As-Built documental — 22/10/2026 |
 
 ---
 
@@ -35,28 +35,31 @@ arquivo, saem respostas sobre ele.
 
 ---
 
-## 2. Escopo da Entrega 1
+## 2. Estado As-Built e escopo
 
-Fundação do projeto: repositório governado, especificação técnica e trabalho dividido. Nada
-de implementação.
+Esta versão registra o estado observável do repositório em 22/10/2026. O conteúdo versionado
+na base `develop` contém documentação (`README.md`, `CLAUDE.md` e esta SPEC) e diretórios
+`app/` e `tests/` com apenas marcadores `.gitkeep`. Este estado não comprova configurações
+externas do GitHub, como proteção de branches, colaboradores, Issues ou quadro de projeto.
 
-**Entregue nesta etapa:**
+| Componente ou entrega | Estado observado |
+|---|---|
+| Documentação inicial e decisões de arquitetura | Presente em `README.md`, `CLAUDE.md` e nesta SPEC |
+| Modelos, leitura CSV, normalização, consultas e API | Não implementados; não há módulos Python em `app/` |
+| Fichas JSON de bancos | Não presentes |
+| Persistência SQLite | Não implementada |
+| Ambiente Docker e comando do harness | Não configurados; não há `docker-compose.yml` |
+| Testes Pytest e fixtures sintéticas | Não presentes; `tests/` contém somente `.gitkeep` |
+| Cobertura mínima RNF07 | Não medida; não há código nem testes a medir |
 
-- Repositório público, com todos os integrantes como colaboradores
-- Fluxo de branches `main` / `develop` / `feature/*`, com a `main` protegida por regra ativa
-  (Pull Request obrigatório, uma aprovação, sem lista de bypass)
-- README com visão geral, guia de execução e as decisões de arquitetura (ADRs)
-- Esta especificação técnica
-- Arquivo de contexto do agente de IA (`CLAUDE.md`)
-- Issues abertas a partir da decomposição da §7, com responsável atribuído, organizadas no
-  quadro do GitHub Projects
+RF01–RF14, RN01–RN10, RNF01–RNF07, contratos e interfaces das seções seguintes continuam
+sendo requisitos normativos para a implementação futura. Não devem ser lidos como afirmação
+de que o comportamento correspondente está disponível no produto atual. As metas de execução
+e cobertura só poderão ser consideradas verificadas após a criação do aplicativo e a execução
+do harness completo.
 
-**Fora de escopo nesta entrega:** implementação de qualquer unidade, ambiente containerizado,
-harness de testes, API HTTP, persistência e consultas.
-
-> Conforme orientação do professor na Oficina Prática I (22/08), a Entrega Inicial pode ser
-> entregue incompleta e complementada até a Entrega Intermediária (17/10). A equipe optou por
-> consolidar a fundação nesta etapa e iniciar a implementação na janela seguinte.
+O escopo desta revisão é atualizar a documentação e registrar o estado As-Built; ela não
+implementa unidades de aplicação, não instala dependências e não altera as regras de negócio.
 
 **Fora de escopo em toda a v1.0.0:** categorização de gastos, metas e orçamento, comparação
 com despesas planejadas, Open Finance, múltiplas moedas, autenticação e multiusuário,
