@@ -1,20 +1,26 @@
 # Roteiro de apresentação e demonstração
 
-| Duração-alvo | Formato | Estado considerado |
-|---|---|---|
-| 4 minutos | Gravação de tela com narração | Documentação e estrutura inicial; aplicação não implementada |
+| Duração-alvo | Formato                       | Estado considerado                                           |
+| ------------ | ----------------------------- | ------------------------------------------------------------ |
+| 4 minutos    | Gravação de tela com narração | API e harness funcionais; dados sintéticos |
 
-Este roteiro não simula uma API funcional. Não exiba respostas inventadas nem arquivos com
-dados bancários reais. Caso a implementação esteja disponível na data da gravação, atualize o
-roteiro, rode a suíte completa e substitua a parte de arquitetura por uma demonstração real,
-validada e com dados sintéticos.
+Use somente o CSV gerado abaixo; não exiba respostas inventadas nem arquivos com dados
+bancários reais. A última validação local passou em Python 3.11.9; a imagem Python 3.12 e o
+Compose ainda precisam ser executados em um host com Docker ativo.
 
 ## Preparação
 
-- Grave em uma janela limpa, com `README.md` e `docs/SPEC.md` prontos para mostrar.
+- Inicie os serviços e gere um CSV fictício com semente fixa:
+
+	```bash
+	docker compose up --build -d api
+	python -m gerador --bank banco-a --seed 17 --quantity 12 --output dados/demo.csv
+	```
+
+- Abra `http://localhost:8000/docs` e deixe `dados/demo.csv` pronto para upload.
 - Desative notificações e não exponha credenciais, arquivos pessoais ou dados bancários.
 - Use um cronômetro e mantenha a gravação entre 3 e 5 minutos.
-- Não apresente o diagrama ou os contratos como funcionalidades já executáveis.
+- Rode `docker compose run --rm tests` antes de gravar, no host Docker da demonstração.
 
 ## Roteiro cronometrado
 
@@ -31,26 +37,25 @@ validada e com dados sintéticos.
 
 ### 0:35–1:20 — Arquitetura
 
-**Tela:** diagrama Mermaid no README; em seguida, seção de arquitetura na SPEC.
+**Tela:** diagrama Mermaid no README; em seguida, módulos na árvore do projeto.
 
 **Fala:**
 
-> A arquitetura proposta separa leitura do arquivo, regras de normalização, consultas, API e
-> persistência. A camada HTTP deve traduzir as requisições; as regras de negócio ficam isoladas
-> e trabalham com valores inteiros em centavos. O diagrama representa o desenho previsto, não
-> módulos disponíveis nesta versão do repositório.
+> A aplicação separa leitura CSV, normalização, consultas, API e persistência. A camada HTTP
+> traduz as requisições, enquanto as regras trabalham sem FastAPI ou SQL e usam centavos
+> inteiros. As três fichas são sintéticas e demonstram convenções diferentes de sinal.
 
-### 1:20–2:20 — Regras que protegem os resultados
+### 1:20–2:20 — Upload e análise
 
-**Tela:** `docs/SPEC.md` §4 e tabela de requisitos funcionais.
+**Tela:** envie `dados/demo.csv` em `POST /extratos`; depois abra os endpoints de resumo,
+`por-semana`, `repetidos` e `dias-no-negativo` no Swagger.
 
 **Fala:**
 
-> A especificação define regras para evitar inferências silenciosas: a data segue o formato da
-> ficha do banco, valores com precisão excedente são recusados e uma linha inválida não deve
-> interromper o restante do arquivo. Também define como agrupar lançamentos do mesmo dia para
-> analisar o saldo. Essas decisões precisam ser verificadas por testes antes de qualquer
-> resultado ser tratado como confiável.
+> O upload retorna as linhas aceitas e recusadas. As consultas usam o extrato persistido: o
+> resumo soma centavos, o agrupamento semanal começa na segunda-feira, e os gastos repetidos
+> exigem ao menos três ocorrências dentro da tolerância de 10%. O saldo é avaliado em blocos por
+> data, sem inventar ordem entre lançamentos do mesmo dia.
 
 ### 2:20–3:05 — Privacidade e uso de IA
 
@@ -58,25 +63,23 @@ validada e com dados sintéticos.
 
 **Fala:**
 
-> Dados de extrato são sensíveis. O projeto proíbe dados bancários reais em fixtures e logs, e
-> prevê exemplos sintéticos. A análise de IA documenta riscos de alucinação, privacidade,
-> propriedade intelectual e a necessidade de revisão humana. Não há neste repositório evidência
-> de uma ferramenta de IA usada nem de uma avaliação comparativa executada.
+> Dados bancários reais não são usados. A fixture da demonstração é gerada com semente fixa e
+> o diretório `dados/` não é versionado. A equipe deve rever saídas de IA, dependências,
+> privacidade e propriedade intelectual; os testes e a revisão humana são controles separados.
 
-### 3:05–3:45 — Estado entregue e próximos passos
+### 3:05–3:45 — Testes e limites
 
-**Tela:** árvore de arquivos ou `ERROS.md` e a seção As-Built da SPEC.
+**Tela:** resultado de `docker compose run --rm tests` e `docs/COVERAGE.md`.
 
 **Fala:**
 
-> Transparência sobre o estado atual: esta entrega contém a documentação e a estrutura inicial.
-> A API, o banco, as fichas, o ambiente Docker e os testes ainda não estão implementados; por
-> isso, não existe uma execução funcional nem um percentual de cobertura para apresentar. Os
-> próximos passos são implementar os módulos conforme a SPEC, criar o harness com dados
-> sintéticos e só então gravar uma demonstração de ponta a ponta.
+> A suíte local tem 65 testes aprovados, cobertura de 94,6% em regras e 100% em consultas. O
+> benchmark local processou cem mil linhas sintéticas em 1,25 segundo; isso não substitui uma
+> medição de memória nem a validação nas condições exatas de hardware da especificação. O
+> ambiente Docker e Python 3.12 devem ser confirmados no host de entrega.
 
 ## Encerramento
 
-Finalize em até 4 minutos com a limitação explícita. Se a implementação e os testes forem
-concluídos antes da gravação, atualize as falas e mostre somente uma execução real cuja saída
-tenha sido validada. Não altere a duração escondendo pré-requisitos ou simulando resultados.
+Finalize em até 4 minutos, mostrando respostas reais da API para o arquivo sintético e mantendo
+as limitações de ambiente explícitas. Remova o serviço depois da gravação com
+`docker compose down`; não use `-v`, para não apagar o volume local.
