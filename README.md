@@ -4,8 +4,8 @@
 
 **Envie um extrato bancário. Faça perguntas sobre ele.**
 
-![Etapa](https://img.shields.io/badge/etapa-02%20e%2003%20%E2%80%94%20implementacao-1F4E79)
-![Status](https://img.shields.io/badge/status-API%20funcional-2E7D32)
+![Etapa](https://img.shields.io/badge/etapa-01%20%E2%80%94%20funda%C3%A7%C3%A3o-1F4E79)
+![Status](https://img.shields.io/badge/status-em%20desenvolvimento-C08A2E)
 ![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
@@ -14,12 +14,6 @@
 </div>
 
 Especificação técnica completa: **[`docs/SPEC.md`](docs/SPEC.md)**
-
-> **Estado As-Built (22/10/2026):** API, leitura CSV, normalização, consultas, persistência
-> SQLite, três fichas sintéticas e harness estão implementados. A suíte local passou com 66
-> testes e 97,2% de cobertura total. Docker está configurado para Python 3.12, mas o build não
-> foi executado neste host por indisponibilidade do daemon; a validação local usou Python 3.11.9.
-> Consulte [`docs/SPEC.md`](docs/SPEC.md) e [`ERROS.md`](ERROS.md) para evidências e limites.
 
 ---
 
@@ -35,8 +29,6 @@ de saída e nomes de coluna de um jeito.
 **O Statement Analyzer resolve as duas coisas.** Você envia o arquivo, ele entende o formato
 do banco pela ficha declarada, normaliza os lançamentos para um modelo único e passa a
 responder consultas sobre eles.
-
-Arquitetura implementada:
 
 ```mermaid
 flowchart LR
@@ -61,27 +53,25 @@ número da linha, e a leitura continua (RN05).
 
 ## Funcionalidades
 
-Rotas HTTP implementadas:
-
-| Método   | Rota             | Descrição                                        |
-| :------- | :--------------- | :----------------------------------------------- |
-| `POST`   | `/extratos`      | Envia o arquivo e devolve o resultado da leitura |
-| `GET`    | `/extratos`      | Lista os extratos enviados                       |
-| `GET`    | `/extratos/{id}` | Detalhes do extrato e seus lançamentos           |
+| Método | Rota | Descrição |
+|:---|:---|:---|
+| `POST` | `/extratos` | Envia o arquivo e devolve o resultado da leitura |
+| `GET` | `/extratos` | Lista os extratos enviados |
+| `GET` | `/extratos/{id}` | Detalhes do extrato e seus lançamentos |
 | `DELETE` | `/extratos/{id}` | Apaga o extrato, seus lançamentos e suas recusas |
 
 ### Consultas
 
-| Rota                                   | Responde                                                |
-| :------------------------------------- | :------------------------------------------------------ |
-| `GET /extratos/{id}/resumo`            | Entradas, saídas, saldo, média diária e período         |
-| `GET /extratos/{id}/saldo`             | Saldo final, se ficou negativo, saldo mínimo e sua data |
-| `GET /extratos/{id}/maior-entrada`     | O maior valor que entrou                                |
-| `GET /extratos/{id}/maior-despesa`     | O maior valor que saiu                                  |
-| `GET /extratos/{id}/top-despesas?n=10` | As N maiores saídas                                     |
-| `GET /extratos/{id}/por-semana`        | Entradas, saídas e saldo por semana                     |
-| `GET /extratos/{id}/dias-no-negativo`  | Quantos dias no vermelho, e quais                       |
-| `GET /extratos/{id}/repetidos`         | Gastos que se repetem no período                        |
+| Rota | Responde |
+|:---|:---|
+| `GET /extratos/{id}/resumo` | Entradas, saídas, saldo, média diária e período |
+| `GET /extratos/{id}/saldo` | Saldo final, se ficou negativo, saldo mínimo e sua data |
+| `GET /extratos/{id}/maior-entrada` | O maior valor que entrou |
+| `GET /extratos/{id}/maior-despesa` | O maior valor que saiu |
+| `GET /extratos/{id}/top-despesas?n=10` | As N maiores saídas |
+| `GET /extratos/{id}/por-semana` | Entradas, saídas e saldo por semana |
+| `GET /extratos/{id}/dias-no-negativo` | Quantos dias no vermelho, e quais |
+| `GET /extratos/{id}/repetidos` | Gastos que se repetem no período |
 
 ### Fora do escopo da v1.0.0
 
@@ -91,38 +81,47 @@ para demonstração.
 
 ---
 
-## Execução e validação
+## Como executar
 
-Pré-requisito para o ambiente de referência: Docker com Compose. O serviço `api` persiste o
-banco em volume Docker; o serviço `tests` executa Pytest e gera relatório HTML de cobertura.
+Pré-requisito: **Docker**. Nada mais precisa estar instalado.
 
 ```bash
-git clone https://github.com/gustavo-lqt/statement-analyzer.git
+git clone https://github.com/<organizacao>/statement-analyzer.git
 cd statement-analyzer
 
-docker compose up --build api
-docker compose run --rm tests
+docker compose up api            # API em http://localhost:8000 (docs em /docs)
+docker compose run --rm tests    # suíte de testes completa
 ```
-
-A documentação interativa da API fica em `http://localhost:8000/docs`. No ambiente usado nesta
-implementação, a execução equivalente foi `python -m pytest --cov=app.regras --cov=app.consultas
---cov-report=term-missing --cov-report=html`: 66 testes passaram, com 94,6% em regras e 100%
-em consultas. O Docker não pôde ser construído neste host porque o daemon não estava ativo.
 
 ---
 
 ## Colaboração com IA
 
-**Ferramenta:** a equipe pode avaliar Claude Code, Codex CLI, Cursor e Antigravity segundo
-disponibilidade, integração ao fluxo e controles de privacidade. Este repositório não registra
-uma comparação empírica nem a ferramenta usada para produzir a implementação. A análise e os
-limites estão em [`docs/RELATORIO_IA.md`](docs/RELATORIO_IA.md). O agente deve seguir
-[`CLAUDE.md`](CLAUDE.md) e a fonte da verdade, `docs/SPEC.md`.
+**Ferramenta:** a definir entre Claude Code, Codex CLI, Cursor e Antigravity. Qualquer que
+seja a escolha, o agente é regido pelo [`CLAUDE.md`](CLAUDE.md) na raiz do repositório, que o
+obriga a seguir a `docs/SPEC.md` — para Cursor, o mesmo conteúdo é espelhado em
+`.cursorrules`; para Codex CLI, em `AGENTS.md`.
 
-**Uso pretendido no fluxo SDD:** a especificação é escrita primeiro pela equipe; o agente
-propõe alterações a partir dela; testes e revisão humana verificam o resultado. Ambiguidades
-confirmadas devem voltar como refinamento na `docs/SPEC.md` §8. A suíte desta implementação
-está em `tests/`; qualquer integração em branch protegida continua sujeita a revisão humana.
+**Uso no fluxo SDD:** a especificação é escrita primeiro pela equipe; o agente implementa a
+partir dela; o harness valida; o que os testes revelarem ambíguo volta como refinamento na
+`docs/SPEC.md` §8. Todo código gerado passa por Pull Request com revisão humana de outro
+integrante — nenhum merge acontece sem suíte verde.
+
+**Prompts relevantes** ficam versionados em [`docs/prompts/`](docs/prompts/).
+
+<details>
+<summary>Exemplo de prompt usado e resultado obtido</summary>
+
+```
+Implemente a unidade U3 (app/regras.py) conforme docs/SPEC.md §4 e §7,
+com a interface definida na Issue #5. Depois rode o harness e me mostre
+o resultado. Não modifique os testes.
+```
+
+**Resultado:** motor de normalização gerado cobrindo RN01–RN06. Ajuste manual necessário em
+RN04 — o agente arredondava valores de três casas em vez de recusar a linha; detectado pelo
+teste `test_precisao_excedente_recusa_a_linha`. Ver PR #«n».
+</details>
 
 ---
 
@@ -182,36 +181,30 @@ primeira leitura.
 encoding, locale e interpretação de data — exatamente o que varia entre máquinas.
 **Decisão:** desenvolvimento local com dependências travadas; Docker obrigatório antes de
 abrir PR e na entrega.
-**Consequências:** Docker fornece Python 3.12 e ambiente reproduzível; `requirements.txt`
-declara as dependências diretas. O build Docker ainda deve ser executado na máquina de entrega.
-
-### ADR-007 — Dependências de execução e teste
-
-FastAPI, Uvicorn, `python-multipart`, Pytest, HTTPX e `pytest-cov` estão declarados em
-[`requirements.txt`](requirements.txt); a justificativa e a situação de revisão estão em
-[`docs/ADR-007-dependencias-execucao-e-testes.md`](docs/ADR-007-dependencias-execucao-e-testes.md).
+**Consequências:** ciclo rápido no dia a dia e reprodutibilidade verificável na entrega. Exige
+manter as duas definições de dependência em sincronia.
 
 ---
 
 ## Evidências de execução
 
-- Suíte local: 66 testes passaram; regras 94,6%, consultas 100%, cobertura total 97,2%.
-- Desempenho local: importação de 100.000 linhas sintéticas em 1,25 s; não certifica consumo de
-    memória nem o limite de hardware de 2 vCPU/4 GB da RNF04.
-- Execução Docker: configuração pronta, porém não validada neste host porque o daemon estava
-    indisponível. O relatório detalhado está em [`docs/COVERAGE.md`](docs/COVERAGE.md).
+Log da última execução da suíte: [`logs_testes.txt`](logs_testes.txt), gerado com
+
+```bash
+docker compose run --rm tests | tee logs_testes.txt
+```
 
 ---
 
 ## Equipe
 
-| Integrante                   | RA       |
-| ---------------------------- | :------- |
-| Diego de Souza               | 22352472 |
-| Felipe Marinho               | 22353607 |
-| Gustavo Lourenço             | 22350665 |
+| Integrante | RA |
+|---|:---|
+| Diego de Souza | 22352472 |
+| Felipe Marinho | 22353607 |
+| Gustavo Lourenço | 22350665 |
 | Italo Henrique Lins Carneiro | 22350066 |
-| João Caio Dutra Gontijo      | 22352975 |
+| João Caio Dutra Gontijo | 22352975 |
 
 A divisão de tarefas está nas [Issues](../../issues), com responsável atribuído em cada uma.
 As unidades do sistema estão descritas em [`docs/SPEC.md`](docs/SPEC.md) §7.
