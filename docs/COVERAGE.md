@@ -1,7 +1,8 @@
 # Relatório de cobertura de testes
 
-**Data da verificação:** 22/10/2026  
-**Estado:** não medido; nenhum relatório de execução foi gerado.
+| Data da verificação | Estado |
+|---|---|
+| 22/10/2026 | Não medido; nenhum relatório de execução foi gerado |
 
 ## Resultado
 
