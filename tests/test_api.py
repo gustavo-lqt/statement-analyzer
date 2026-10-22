@@ -150,6 +150,28 @@ def test_exclusao_em_cascata_e_not_found(client):
     missing = client.get(f"/extratos/{extract_id}")
     assert missing.status_code == 404
     assert missing.json()["erro"] == "EXTRATO_NAO_ENCONTRADO"
+    missing_balance = client.get(f"/extratos/{extract_id}/saldo")
+    assert missing_balance.status_code == 404
+    assert missing_balance.json()["erro"] == "EXTRATO_NAO_ENCONTRADO"
+    delete_missing = client.delete(f"/extratos/{extract_id}")
+    assert delete_missing.status_code == 404
+    assert delete_missing.json()["erro"] == "EXTRATO_NAO_ENCONTRADO"
+
+
+def test_consulta_saldo_retorna_metricas_completas(client):
+    """Verifica RF08 e formato de resposta para consulta de saldo."""
+    response = client.post(
+        "/extratos",
+        data={"banco": "banco-a", "saldo_inicial_centavos": "1000"},
+        files={"arquivo": ("synthetic.csv", _csv("01/09/2026;ITEM;5,00"), "text/csv")},
+    )
+    extract_id = response.json()["id"]
+    result = client.get(f"/extratos/{extract_id}/saldo").json()
+    assert result["saldo_inicial_centavos"] == 1000
+    assert result["saldo_final_centavos"] == 1500
+    assert result["ficou_negativo"] is False
+    assert result["saldo_minimo_centavos"] == 1000
+    assert result["data_saldo_minimo"] is None
 
 
 def test_erro_interno_nao_vaza_detalhes_e_usa_formato_unico(client):
