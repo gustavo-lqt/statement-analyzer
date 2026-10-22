@@ -1,8 +1,8 @@
 # Roteiro de apresentação e demonstração
 
-**Duração-alvo:** 4 minutos  
-**Formato:** gravação de tela com narração  
-**Estado considerado:** documentação e estrutura inicial; a aplicação não está implementada.
+| Duração-alvo | Formato | Estado considerado |
+|---|---|---|
+| 4 minutos | Gravação de tela com narração | Documentação e estrutura inicial; aplicação não implementada |
 
 Este roteiro não simula uma API funcional. Não exiba respostas inventadas nem arquivos com
 dados bancários reais. Caso a implementação esteja disponível na data da gravação, atualize o
