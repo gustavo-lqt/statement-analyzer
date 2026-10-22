@@ -89,6 +89,9 @@ def _row_value(linha: LinhaCrua, ficha: FichaBanco, canonical_name: str) -> str 
 
 def normalizar(linha: LinhaCrua, ficha: FichaBanco) -> Lancamento | Recusa:
     """Aplica RN01–RN05: interpreta pela ficha, usa centavos e recusa a linha inválida."""
+    if linha.motivo_recusa is not None:
+        return Recusa(linha.numero_linha, linha.motivo_recusa, linha.conteudo_bruto)
+
     date_value = _row_value(linha, ficha, "data")
     description = _row_value(linha, ficha, "descricao")
     if date_value is None or description is None:
