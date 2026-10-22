@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from fastapi.testclient import TestClient
+
 
 def _csv(*rows: str) -> str:
     return "\n".join(("Data;Historico;Valor", *rows, ""))
@@ -148,3 +150,20 @@ def test_exclusao_em_cascata_e_not_found(client):
     missing = client.get(f"/extratos/{extract_id}")
     assert missing.status_code == 404
     assert missing.json()["erro"] == "EXTRATO_NAO_ENCONTRADO"
+
+
+def test_erro_interno_nao_vaza_detalhes_e_usa_formato_unico(client):
+    """Verifica RNF01 para exceção inesperada sem expor detalhe interno ao cliente."""
+    def fail_listing():
+        raise RuntimeError("synthetic internal detail")
+
+    client.app.state.database.listar_extratos = fail_listing
+    response = TestClient(client.app, raise_server_exceptions=False).get("/extratos")
+
+    assert response.status_code == 500
+    assert response.json() == {
+        "erro": "ERRO_INTERNO",
+        "mensagem": "Erro interno ao processar a solicitação.",
+        "regra": None,
+    }
+    assert "synthetic internal detail" not in response.text
