@@ -81,6 +81,17 @@ def _parse_cents(value: str, ficha: FichaBanco, *, absolute: bool = False) -> in
     return sign * cents
 
 
+def _has_excess_precision(value: str, ficha: FichaBanco) -> bool:
+    text = value.strip().strip("()")
+    if text.startswith(("+", "-")):
+        text = text[1:]
+    decimal_separator = ficha.separador_decimal
+    if not decimal_separator or text.count(decimal_separator) != 1:
+        return False
+    _whole, fractional = text.split(decimal_separator, maxsplit=1)
+    return fractional.isdigit() and len(fractional) >= 3
+
+
 def _row_value(linha: LinhaCrua, ficha: FichaBanco, canonical_name: str) -> str | None:
     if canonical_name not in ficha.colunas:
         return None
@@ -97,9 +108,29 @@ def normalizar(linha: LinhaCrua, ficha: FichaBanco) -> Lancamento | Recusa:
     if date_value is None or description is None:
         return Recusa(linha.numero_linha, "COLUNA_AUSENTE", linha.conteudo_bruto)
 
+    required_value_columns = {
+        "NEGATIVO_SAIDA": {"valor"},
+        "COLUNA_DC": {"valor", "tipo"},
+        "COLUNAS_SEPARADAS": {"credito", "debito"},
+    }.get(ficha.convencao_sinal, set())
+    if not required_value_columns <= ficha.colunas.keys():
+        return Recusa(linha.numero_linha, "COLUNA_AUSENTE", linha.conteudo_bruto)
+    if any(_row_value(linha, ficha, name) is None for name in required_value_columns):
+        return Recusa(linha.numero_linha, "COLUNA_AUSENTE", linha.conteudo_bruto)
+
     normalized_date = _parse_date(date_value, ficha.formato_data)
     if normalized_date is None:
         return Recusa(linha.numero_linha, "DATA_INVALIDA", linha.conteudo_bruto)
+
+    precision_values: list[str] = []
+    if ficha.convencao_sinal in {"NEGATIVO_SAIDA", "COLUNA_DC"}:
+        precision_values.append(_row_value(linha, ficha, "valor") or "")
+    elif ficha.convencao_sinal == "COLUNAS_SEPARADAS":
+        precision_values.extend(
+            _row_value(linha, ficha, name) or "" for name in ("credito", "debito")
+        )
+    if any(_has_excess_precision(value, ficha) for value in precision_values):
+        return Recusa(linha.numero_linha, "PRECISAO_INVALIDA", linha.conteudo_bruto)
 
     if ficha.convencao_sinal == "NEGATIVO_SAIDA":
         raw_value = _row_value(linha, ficha, "valor")
