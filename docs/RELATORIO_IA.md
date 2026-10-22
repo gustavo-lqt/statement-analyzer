@@ -44,7 +44,7 @@ Controles previstos:
   aceitar uma mudança.
 - Revisar diffs, erros e resultados de execução por uma pessoa responsável.
 - Não apresentar testes inexistentes ou não executados como aprovados. A suíte desta entrega
-  teve 65 testes aprovados em Python 3.11.9; a imagem Python 3.12 e o Docker não foram
+  teve 66 testes aprovados em Python 3.11.9; a imagem Python 3.12 e o Docker não foram
   validados neste host.
 
 ### 2. Privacidade e LGPD
