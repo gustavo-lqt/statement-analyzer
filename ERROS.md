@@ -1,26 +1,28 @@
 # Registro de falhas e validação
 
-Este registro separa falhas observadas de verificações que não puderam ser executadas.
-Não há harness no estado atual do repositório; portanto, não atribuímos erros hipotéticos a
-uma execução inexistente.
+Este arquivo registra defeitos encontrados durante implementação, evidência de correção e
+limitações de validação. Todos os exemplos e testes usam dados sintéticos.
 
-## Estado da validação
+## Estado atual
 
-| Data | Verificação | Resultado | Causa | Correção ou prevenção |
-|---|---|---|---|---|
-| 2026-10-22 | Inspeção do conteúdo versionado | Bloqueada | `app/` e `tests/` contêm apenas `.gitkeep`; não há `docker-compose.yml` nem projeto Python executável. | Adicionar a implementação e o harness previstos em `docs/SPEC.md` antes de rodar testes. |
-| 2026-10-22 | Pytest e cobertura | Não executados | O comando `pytest` não está disponível neste ambiente e não há testes no repositório. Instalar uma dependência isoladamente não criaria testes nem código a medir. | Após a entrega do harness, configurar as dependências aprovadas, executar a suíte completa e guardar o relatório real, incluindo a cobertura de `app/regras.py` e `app/consultas.py`. |
+| Verificação | Resultado | Evidência ou limitação |
+|---|---|---|
+| Suíte Pytest | 65 passaram | Executada no Windows com Python 3.11.9 |
+| Cobertura RNF07 | Regras 94,6%; consultas 100%; total 97,2% | Relatório em `docs/COVERAGE.md` |
+| Importação de 100.000 linhas | 1,25 s | Medição local sintética; não certifica 2 vCPU/4 GB nem consumo de memória |
+| Docker e Python 3.12 | Não validados neste host | Daemon Docker indisponível; imagem configurada para Python 3.12 |
 
-Nenhuma falha lógica de teste foi observada nesta revisão: nenhum teste pôde ser iniciado.
-Este estado não equivale a uma suíte aprovada.
+## Falhas corrigidas
 
-## Registro de falhas do harness
+| Regra/área | Sintoma | Causa raiz | Correção e regressão |
+|---|---|---|---|
+| RN02 | `1.234,56` era recusado | A validação de dígitos ocorria antes da remoção do separador de milhar | Validar agrupamento e remover o milhar antes da conversão; coberto em `tests/test_regras.py` |
+| RN04 | Precisão acima de duas casas recebia `VALOR_INVALIDO` | Erros monetários eram colapsados em um único motivo | Detectar precisão excedente antes do parse e devolver `PRECISAO_INVALIDA`; coberto em `tests/test_regras.py` |
+| RN05 | Byte UTF-8 inválido no meio do arquivo abortava a leitura | O decodificador fazia leitura antecipada do fluxo completo | Decodificar linhas físicas e recusar somente o registro, continuando os seguintes; coberto em `tests/test_leitura.py` |
+| RN07 | Saldo inicial omitido era indistinguível de zero informado | Apenas o valor numérico era persistido | Persistir `saldo_inicial_assumido`; coberto em `tests/test_db.py` e `tests/test_api.py` |
 
-Quando o harness existir, registrar cada falha com evidência reproduzível:
+Não há falha conhecida na última execução local. A validação Docker/Python 3.12 continua
+pendente; aprovação local não substitui essa checagem no ambiente de referência.
 
-| Data | Teste/regra | Sintoma e evidência | Causa raiz | Correção | Prevenção/regressão |
-|---|---|---|---|---|---|
-| — | Ainda não há execuções | — | Harness ausente | — | Preencher esta linha somente após executar os testes. |
-
-Não incluir descrições de lançamentos ou qualquer dado bancário real neste arquivo. Fixtures
-e exemplos devem ser sintéticos, conforme RNF05 e RNF06.
+Não incluir descrições de lançamentos, extratos ou qualquer dado bancário real neste arquivo,
+em logs ou fixtures (RNF05 e RNF06).
