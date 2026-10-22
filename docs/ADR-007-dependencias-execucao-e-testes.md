@@ -1,6 +1,6 @@
 # ADR-007 — Dependências de execução e teste
 
-**Status:** implementada para esta entrega; revisão da equipe pendente  
+**Status:** implementada para esta entrega; revisão da equipe pendente
 **Data:** 22/10/2026
 
 ## Contexto
