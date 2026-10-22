@@ -1,34 +1,31 @@
 # Relatório de cobertura de testes
 
-| Data da verificação | Estado |
-|---|---|
-| 22/10/2026 | Não medido; nenhum relatório de execução foi gerado |
+| Data da verificação | Ambiente |
+| ------------------- | -------- |
+| 22/10/2026          | Windows, Python 3.11.9, Pytest 8.4.2, pytest-cov 6.3.0 |
 
 ## Resultado
 
-| Módulo alvo | Cobertura | Estado |
-|---|---:|---|
-| `app/regras.py` | N/A | Arquivo não existe |
-| `app/consultas.py` | N/A | Arquivo não existe |
+| Módulo alvo        | Statements | Não cobertas | Cobertura |
+| ------------------ | ----------: | -----------: | --------: |
+| `app/regras.py`    |         130 |            7 |     94,6% |
+| `app/consultas.py` |         116 |            0 |    100,0% |
+| **Total**          |     **246** |        **7** | **97,2%** |
 
-O diretório `tests/` contém somente `.gitkeep`. Não há testes Pytest, dependências de teste ou
-`docker-compose.yml`; o comando `pytest` também não está disponível no ambiente verificado.
-Sem código e testes executáveis, qualquer percentual seria enganoso. Este documento registra o
-bloqueio e não substitui um relatório gerado pelo runner.
+Resultado da suíte: **65 testes passaram**. A meta RNF07 de pelo menos 80% foi atendida nos dois
+módulos-alvo. Os sete statements não cobertos estão em ramos excepcionais de validação; o
+relatório linha a linha está em `htmlcov/index.html` no workspace local.
 
-## Configuração preparada
+## Reprodução
 
-O arquivo `.coveragerc` define os módulos de origem e o mínimo de 80% previsto pela RNF07.
-Nenhuma dependência foi instalada. Quando a aplicação e o harness forem adicionados, a equipe
-deve aprovar e incluir `pytest-cov` nas dependências de teste, configurar o serviço `tests` para
-executar `pytest --cov --cov-report=term-missing --cov-report=html` e validar a suíte completa
-no ambiente de referência:
+O relatório foi produzido com:
 
 ```bash
-docker compose run --rm tests
+python -m pytest --cov=app.regras --cov=app.consultas --cov-report=term-missing --cov-report=html
 ```
 
-Depois da execução, substituir este registro por evidência real: comando e ambiente, resultado
-da suíte, percentual medido de cada módulo, linhas não cobertas e artefato produzido. A meta
-RNF07 só é atendida quando `app/regras.py` e `app/consultas.py` atingirem pelo menos 80% na
-execução validada.
+O comando de referência do container é `docker compose run --rm tests`. A imagem está definida
+para Python 3.12, mas não pôde ser construída neste host porque o daemon Docker estava
+indisponível; portanto, os números acima correspondem ao Python 3.11.9 local, não a uma
+execução Docker. A pasta `htmlcov/` é ignorada pelo Git; este resumo versionado preserva os
+resultados numéricos e o ambiente da medição.
