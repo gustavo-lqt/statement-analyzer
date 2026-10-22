@@ -1,7 +1,9 @@
 # Relatório técnico e ético sobre uso de IA
 
-**Projeto:** Statement Analyzer  
-**Data:** 22/10/2026  
+| Projeto | Data |
+|---|---|
+| Statement Analyzer | 22/10/2026 |
+
 **Escopo da evidência:** análise documental. O repositório não contém implementação nem histórico
 de uso de uma ferramenta de IA; portanto, esta matriz não é benchmark e não afirma que uma
 ferramenta foi usada para gerar código.
