@@ -1,0 +1,9 @@
+[run]
+source =
+    app.regras
+    app.consultas
+
+[report]
+fail_under = 80
+precision = 1
+show_missing = True

@@ -1,0 +1,26 @@
+services:
+  api:
+    build: .
+    command: ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      DATABASE_PATH: /data/statement-analyzer.sqlite3
+    ports:
+      - "8000:8000"
+    volumes:
+      - statement-data:/data
+
+  tests:
+    build: .
+    command:
+      - pytest
+      - --cov=app.regras
+      - --cov=app.consultas
+      - --cov-report=term-missing
+      - --cov-report=html
+    environment:
+      DATABASE_PATH: ":memory:"
+    volumes:
+      - .:/workspace
+
+volumes:
+  statement-data:

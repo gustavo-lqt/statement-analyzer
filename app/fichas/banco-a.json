@@ -1,0 +1,14 @@
+{
+  "nome": "banco-a",
+  "delimitador": ";",
+  "encoding": "utf-8",
+  "formato_data": "dd/mm/aaaa",
+  "separador_decimal": ",",
+  "separador_milhar": ".",
+  "convencao_sinal": "NEGATIVO_SAIDA",
+  "colunas": {
+    "data": "Data",
+    "descricao": "Historico",
+    "valor": "Valor"
+  }
+}
