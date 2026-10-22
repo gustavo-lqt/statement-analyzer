@@ -16,7 +16,7 @@
 Especificação técnica completa: **[`docs/SPEC.md`](docs/SPEC.md)**
 
 > **Estado As-Built (22/10/2026):** API, leitura CSV, normalização, consultas, persistência
-> SQLite, três fichas sintéticas e harness estão implementados. A suíte local passou com 65
+> SQLite, três fichas sintéticas e harness estão implementados. A suíte local passou com 66
 > testes e 97,2% de cobertura total. Docker está configurado para Python 3.12, mas o build não
 > foi executado neste host por indisponibilidade do daemon; a validação local usou Python 3.11.9.
 > Consulte [`docs/SPEC.md`](docs/SPEC.md) e [`ERROS.md`](ERROS.md) para evidências e limites.
@@ -106,7 +106,7 @@ docker compose run --rm tests
 
 A documentação interativa da API fica em `http://localhost:8000/docs`. No ambiente usado nesta
 implementação, a execução equivalente foi `python -m pytest --cov=app.regras --cov=app.consultas
---cov-report=term-missing --cov-report=html`: 65 testes passaram, com 94,6% em regras e 100%
+--cov-report=term-missing --cov-report=html`: 66 testes passaram, com 94,6% em regras e 100%
 em consultas. O Docker não pôde ser construído neste host porque o daemon não estava ativo.
 
 ---
@@ -195,7 +195,7 @@ FastAPI, Uvicorn, `python-multipart`, Pytest, HTTPX e `pytest-cov` estão declar
 
 ## Evidências de execução
 
-- Suíte local: 65 testes passaram; regras 94,6%, consultas 100%, cobertura total 97,2%.
+- Suíte local: 66 testes passaram; regras 94,6%, consultas 100%, cobertura total 97,2%.
 - Desempenho local: importação de 100.000 linhas sintéticas em 1,25 s; não certifica consumo de
     memória nem o limite de hardware de 2 vCPU/4 GB da RNF04.
 - Execução Docker: configuração pronta, porém não validada neste host porque o daemon estava
