@@ -7,7 +7,7 @@ limitações de validação. Todos os exemplos e testes usam dados sintéticos.
 
 | Verificação | Resultado | Evidência ou limitação |
 |---|---|---|
-| Suíte Pytest | 65 passaram | Executada no Windows com Python 3.11.9 |
+| Suíte Pytest | 66 passaram | Executada no Windows com Python 3.11.9 |
 | Cobertura RNF07 | Regras 94,6%; consultas 100%; total 97,2% | Relatório em `docs/COVERAGE.md` |
 | Importação de 100.000 linhas | 1,25 s | Medição local sintética; não certifica 2 vCPU/4 GB nem consumo de memória |
 | Docker e Python 3.12 | Não validados neste host | Daemon Docker indisponível; imagem configurada para Python 3.12 |
