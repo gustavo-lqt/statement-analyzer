@@ -23,7 +23,7 @@ from app.consultas import (
 from app.db import Database
 from app.leitura import ler
 from app.models import ErroDominio, ParametroInvalido
-from app.regras import processar
+from app.regras import normalizar
 
 
 def _lancamento_json(item: Any) -> dict[str, Any]:
@@ -90,18 +90,22 @@ def create_app(database_path: str | None = None) -> FastAPI:
         if ficha is None:
             raise ErroDominio("BANCO_DESCONHECIDO", f"A ficha '{banco}' não está registrada.")
 
-        content = await arquivo.read()
-        leitura = processar(ler(content, ficha), ficha)
+        arquivo.file.seek(0)
         initial_balance = saldo_inicial_centavos if saldo_inicial_centavos is not None else 0
         created_at = datetime.now().astimezone().isoformat(timespec="seconds")
         database: Database = application.state.database
-        extract_id = database.criar_extrato(
+
+        def normalized_rows():
+            for raw_line in ler(arquivo.file, ficha):
+                yield normalizar(raw_line, ficha)
+
+        extract_id = database.criar_extrato_streaming(
             arquivo.filename or "arquivo.csv",
             banco,
             created_at,
             initial_balance,
             saldo_inicial_centavos is None,
-            leitura,
+            normalized_rows(),
         )
         saved = database.obter_extrato(extract_id, limit=1, offset=0)
         return {
