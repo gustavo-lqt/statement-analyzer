@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import csv
 from io import BytesIO
-from typing import Iterator
+from typing import BinaryIO, Iterator
 
 from app.models import ArquivoVazio, EncodingInvalido, FichaBanco, LinhaCrua
 
 
 class _LinhasCapturadas:
-    def __init__(self, content: bytes, encoding: str) -> None:
+    def __init__(self, content: BinaryIO[bytes], encoding: str) -> None:
         self.stream = content
         self.encoding = encoding
         self.current_record: list[str] = []
@@ -37,13 +37,14 @@ class _LinhasCapturadas:
         return record, has_invalid_encoding
 
 
-def ler(conteudo: bytes, ficha: FichaBanco) -> Iterator[LinhaCrua]:
+def ler(conteudo: bytes | BinaryIO[bytes], ficha: FichaBanco) -> Iterator[LinhaCrua]:
     """Aplica a ficha ao CSV e produz linhas cruas sem importar HTTP (RF01, RNF02)."""
-    if not conteudo:
+    if isinstance(conteudo, bytes) and not conteudo:
         raise ArquivoVazio()
 
     def records() -> Iterator[LinhaCrua]:
-        source = _LinhasCapturadas(BytesIO(conteudo), ficha.encoding)
+        stream = BytesIO(conteudo) if isinstance(conteudo, bytes) else conteudo
+        source = _LinhasCapturadas(stream, ficha.encoding)
         reader = csv.reader(source, delimiter=ficha.delimitador, strict=True)
         try:
             header = next(reader)
