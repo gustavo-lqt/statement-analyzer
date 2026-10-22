@@ -78,6 +78,17 @@ def create_app(database_path: str | None = None) -> FastAPI:
             content={"erro": error.codigo, "mensagem": error.mensagem, "regra": error.regra},
         )
 
+    @application.exception_handler(Exception)
+    async def handle_unexpected_error(_request: Any, _error: Exception) -> JSONResponse:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "erro": "ERRO_INTERNO",
+                "mensagem": "Erro interno ao processar a solicitação.",
+                "regra": None,
+            },
+        )
+
     @application.post("/extratos", status_code=201)
     async def enviar_extrato(
         arquivo: UploadFile | None = File(default=None),
