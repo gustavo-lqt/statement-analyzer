@@ -2,13 +2,17 @@ from __future__ import annotations
 
 import pytest
 
+from app.catalogo import carregar_fichas
 from app.db import Database
 from app.models import (
     Lancamento,
+    NenhumaLinhaValida,
     Recusa,
     RecursoNaoEncontrado,
     ResultadoLeitura,
 )
+from app.leitura import ler
+from app.regras import normalizar
 
 
 def _result() -> ResultadoLeitura:
@@ -82,4 +86,32 @@ def test_saldo_zero_informado_nao_e_marcado_como_assumido(tmp_path):
     database = Database(tmp_path / "synthetic.sqlite3")
     extract_id = _save(database, assumed=False)
     assert database.obter_extrato(extract_id).saldo_inicial_assumido is False
+    database.close()
+
+
+def test_importacao_streaming_insere_por_linha_e_rollback_rn06(tmp_path):
+    """Verifica RF04/RN05/RN06 na importação sequencial e rollback sem linha válida."""
+    database = Database(tmp_path / "synthetic.sqlite3")
+    ficha = carregar_fichas()["banco-a"]
+    payload = (
+        b"Data;Historico;Valor\n"
+        b"01/09/2026;SYNTHETIC OK;1,00\n"
+        b"31/02/2026;SYNTHETIC INVALID;1,00\n"
+    )
+    results = (normalizar(row, ficha) for row in ler(payload, ficha))
+    extract_id = database.criar_extrato_streaming(
+        "stream.csv", ficha.nome, "2026-10-22T12:00:00+00:00", 0, True, results
+    )
+    extract = database.obter_extrato(extract_id)
+    assert extract.total_linhas == 2
+    assert extract.aceitos == 1
+    assert extract.rejeitados == 1
+
+    invalid = b"Data;Historico;Valor\n31/02/2026;SYNTHETIC INVALID;1,00\n"
+    all_invalid = (normalizar(row, ficha) for row in ler(invalid, ficha))
+    with pytest.raises(NenhumaLinhaValida):
+        database.criar_extrato_streaming(
+            "invalid.csv", ficha.nome, "2026-10-22T12:00:00+00:00", 0, True, all_invalid
+        )
+    assert len(database.listar_extratos()) == 1
     database.close()
