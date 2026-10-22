@@ -12,7 +12,7 @@
 | `app/consultas.py` |         116 |            0 |    100,0% |
 | **Total**          |     **246** |        **7** | **97,2%** |
 
-Resultado da suíte: **65 testes passaram**. A meta RNF07 de pelo menos 80% foi atendida nos dois
+Resultado da suíte: **66 testes passaram**. A meta RNF07 de pelo menos 80% foi atendida nos dois
 módulos-alvo. Os sete statements não cobertos estão em ramos excepcionais de validação; o
 relatório linha a linha está em `htmlcov/index.html` no workspace local.
 
