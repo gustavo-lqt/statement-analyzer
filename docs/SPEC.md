@@ -1,4 +1,4 @@
-# Especificação Técnica — Statement Analyzer (v1.1)
+# Especificação Técnica — Statement Analyzer (v1.3)
 
 > **Fonte da verdade do projeto.** Este documento é lido pelo agente de IA que implementa e
 > pelo harness que valida. Código que contraria esta especificação está errado. Especificação
@@ -10,7 +10,7 @@
 | **Disciplina**  | Bootcamp III — Turma B — CEUB — 2026/2                                  |
 | **Repositório** | [statement-analyzer](https://github.com/gustavo-lqt/statement-analyzer) |
 | **Stack**       | Python 3.12 · FastAPI · SQLite · pytest · Docker                        |
-| **Versão**      | v1.2 — As-Built documental — 22/10/2026                                 |
+| **Versão**      | v1.3 — As-Built funcional — 22/10/2026                                   |
 
 ---
 
@@ -37,29 +37,28 @@ arquivo, saem respostas sobre ele.
 
 ## 2. Estado As-Built e escopo
 
-Esta versão registra o estado observável do repositório em 22/10/2026. O conteúdo versionado
-na base `develop` contém documentação (`README.md`, `CLAUDE.md` e esta SPEC) e diretórios
-`app/` e `tests/` com apenas marcadores `.gitkeep`. Este estado não comprova configurações
-externas do GitHub, como proteção de branches, colaboradores, Issues ou quadro de projeto.
+Esta versão registra o estado funcional implementado em 22/10/2026. Os requisitos RF01–RF14
+e RN01–RN10 estão implementados na aplicação e exercitados pelo harness. O estado não comprova
+configurações externas do GitHub, como proteção de branches, colaboradores, Issues ou quadro de
+projeto.
 
-| Componente ou entrega                               | Estado observado                                   |
-| --------------------------------------------------- | -------------------------------------------------- |
-| Documentação inicial e decisões de arquitetura      | Presente em `README.md`, `CLAUDE.md` e nesta SPEC  |
-| Modelos, leitura CSV, normalização, consultas e API | Não implementados; não há módulos Python em `app/` |
-| Fichas JSON de bancos                               | Não presentes                                      |
-| Persistência SQLite                                 | Não implementada                                   |
-| Ambiente Docker e comando do harness                | Não configurados; não há `docker-compose.yml`      |
-| Testes Pytest e fixtures sintéticas                 | Não presentes; `tests/` contém somente `.gitkeep`  |
-| Cobertura mínima RNF07                              | Não medida; não há código nem testes a medir       |
+| Componente | Estado observado |
+|---|---|
+| Modelos, leitura, normalização e consultas | Implementados em `app/`; regras e consultas não dependem de HTTP nem de SQLite |
+| Fichas | Três perfis sintéticos cobrem as convenções `NEGATIVO_SAIDA`, `COLUNA_DC` e `COLUNAS_SEPARADAS`; não representam bancos reais |
+| API e persistência | FastAPI implementa upload, lista, detalhe paginado, exclusão e oito consultas; SQLite mantém todo o SQL em `app/db.py` |
+| Importação | Upload processado por stream e gravado em transação; arquivo sem lançamento válido é revertido por RN06 |
+| Docker | `Dockerfile` e `docker-compose.yml` configurados para Python 3.12, API e testes; build não foi executado neste host porque o daemon Docker estava indisponível |
+| Testes e cobertura | 65 testes passaram no Python 3.11.9; cobertura: regras 94,6%, consultas 100%, total 97,2% |
+| Desempenho | 100.000 linhas sintéticas foram importadas em 1,25 s no host Windows/Python 3.11.9; não é certificação na máquina de referência de 2 vCPU/4 GB |
 
-RF01–RF14, RN01–RN10, RNF01–RNF07, contratos e interfaces das seções seguintes continuam
-sendo requisitos normativos para a implementação futura. Não devem ser lidos como afirmação
-de que o comportamento correspondente está disponível no produto atual. As metas de execução
-e cobertura só poderão ser consideradas verificadas após a criação do aplicativo e a execução
-do harness completo.
+A execução local ficou limitada ao Python 3.11.9 disponível. A imagem está configurada com
+Python 3.12, mas a compatibilidade nessa versão e o build Docker ainda precisam ser confirmados
+quando o daemon estiver disponível. A medição de desempenho não mediu consumo máximo de memória.
 
-O escopo desta revisão é atualizar a documentação e registrar o estado As-Built; ela não
-implementa unidades de aplicação, não instala dependências e não altera as regras de negócio.
+RF01–RF14, RN01–RN10 e RNF01–RN07 permanecem requisitos normativos. A suíte local completa
+passou e a cobertura excede 80% nos dois módulos exigidos pela RNF07. O comando de referência
+para repetir a validação é `docker compose run --rm tests`.
 
 **Fora de escopo em toda a v1.0.0:** categorização de gastos, metas e orçamento, comparação
 com despesas planejadas, Open Finance, múltiplas moedas, autenticação e multiusuário,
@@ -72,22 +71,22 @@ conta (exige o conceito de conta, hoje inexistente no modelo).
 
 ## 3. Requisitos funcionais
 
-|  ID  | Requisito                                                                      | Entrega |
-| :--: | ------------------------------------------------------------------------------ | :-----: |
-| RF01 | Ler um arquivo CSV aplicando a ficha do banco informada                        |    2    |
-| RF02 | Normalizar cada linha para o modelo canônico de Lançamento                     |    2    |
-| RF03 | Recusar linhas inválidas individualmente, registrando motivo e número da linha |    2    |
-| RF04 | Enviar um extrato e persistir lançamentos e recusas                            |    2    |
-| RF05 | Listar extratos e consultar um extrato com seus lançamentos                    |    2    |
-| RF06 | Apagar um extrato, em cascata com lançamentos e recusas                        |    2    |
-| RF07 | Suportar três fichas de banco distintas                                        |    2    |
-| RF08 | Consulta `resumo`: entradas, saídas, saldo, média diária, período, quantidade  |    2    |
-| RF09 | Consulta `saldo`: saldo final, se ficou negativo, saldo mínimo e sua data      |    2    |
-| RF10 | Consultas `maior-entrada` e `maior-despesa`                                    |    2    |
-| RF11 | Consulta `top-despesas`, com N configurável                                    |    2    |
-| RF12 | Consulta `por-semana`: semanas de segunda-feira a domingo; semanas parciais no início e no fim do período são incluídas e limitadas às datas existentes no extrato | 3 |
-| RF13 | Consulta `dias-no-negativo`                                                    |    3    |
-| RF14 | Consulta `repetidos`                                                           |    3    |
+|  ID  | Requisito                                                                                                                                                          | Entrega |
+| :--: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :-----: |
+| RF01 | Ler um arquivo CSV aplicando a ficha do banco informada                                                                                                            |    2    |
+| RF02 | Normalizar cada linha para o modelo canônico de Lançamento                                                                                                         |    2    |
+| RF03 | Recusar linhas inválidas individualmente, registrando motivo e número da linha                                                                                     |    2    |
+| RF04 | Enviar um extrato e persistir lançamentos e recusas                                                                                                                |    2    |
+| RF05 | Listar extratos e consultar um extrato com seus lançamentos                                                                                                        |    2    |
+| RF06 | Apagar um extrato, em cascata com lançamentos e recusas                                                                                                            |    2    |
+| RF07 | Suportar três fichas de banco distintas                                                                                                                            |    2    |
+| RF08 | Consulta `resumo`: entradas, saídas, saldo, média diária, período, quantidade                                                                                      |    2    |
+| RF09 | Consulta `saldo`: saldo final, se ficou negativo, saldo mínimo e sua data                                                                                          |    2    |
+| RF10 | Consultas `maior-entrada` e `maior-despesa`                                                                                                                        |    2    |
+| RF11 | Consulta `top-despesas`, com N configurável                                                                                                                        |    2    |
+| RF12 | Consulta `por-semana`: semanas de segunda-feira a domingo; semanas parciais no início e no fim do período são incluídas e limitadas às datas existentes no extrato |    3    |
+| RF13 | Consulta `dias-no-negativo`                                                                                                                                        |    3    |
+| RF14 | Consulta `repetidos`                                                                                                                                               |    3    |
 
 ---
 
@@ -292,7 +291,7 @@ Requests é a comprovação.
 
 ```python
 # app/leitura.py
-ler(conteudo: bytes, ficha: FichaBanco) -> Iterator[LinhaCrua]
+ler(conteudo: bytes | BinaryIO[bytes], ficha: FichaBanco) -> Iterator[LinhaCrua]
 #   levanta: ArquivoVazio | EncodingInvalido
 
 # app/regras.py — motor puro de normalização
@@ -302,13 +301,13 @@ processar(linhas: Iterable[LinhaCrua], ficha: FichaBanco) -> ResultadoLeitura
 #   levanta: NenhumaLinhaValida (RN06)
 
 # app/consultas.py — motor puro de análise
-resumo(lancamentos) -> Resumo
+resumo(lancamentos, extrato_id: int | None = None) -> Resumo
 saldo(lancamentos, saldo_inicial: int) -> Saldo
 maior_entrada(lancamentos) -> Lancamento | None      # desempate por RN10
 maior_despesa(lancamentos) -> Lancamento | None      # desempate por RN10
 top_despesas(lancamentos, n: int) -> list[Lancamento]
 por_semana(lancamentos) -> list[Semana]
-dias_no_negativo(lancamentos, saldo_inicial: int) -> DiasNoNegativo   # RN07, RN08
+dias_no_negativo(lancamentos, saldo_inicial: int = 0, saldo_inicial_assumido: bool = False) -> DiasNoNegativo   # RN07, RN08
 repetidos(lancamentos) -> list[GrupoRepetido]                          # RN09
 ```
 
@@ -318,6 +317,7 @@ repetidos(lancamentos) -> list[GrupoRepetido]                          # RN09
 CREATE TABLE extrato (
     id INTEGER PRIMARY KEY, nome_arquivo TEXT NOT NULL, banco TEXT NOT NULL,
     criado_em TEXT NOT NULL, saldo_inicial_centavos INTEGER NOT NULL DEFAULT 0,
+  saldo_inicial_assumido INTEGER NOT NULL DEFAULT 1,
     total_linhas INTEGER NOT NULL, aceitos INTEGER NOT NULL, rejeitados INTEGER NOT NULL);
 
 CREATE TABLE lancamento (
@@ -363,6 +363,7 @@ CREATE INDEX idx_lancamento_extrato_data ON lancamento(extrato_id, data);
 | v1.0 → v1.1 | RN08 passou a definir explicitamente o tratamento de lançamentos na mesma data                                                                                                                                                                                    | O cálculo de `dias-no-negativo` era ambíguo quando dois lançamentos do mesmo dia cruzavam o zero em ordens diferentes — o extrato não garante ordem interna do dia                                                                          | #«n» |
 | v1.0 → v1.1 | O escopo da Entrega 1 (§2) deixou de incluir a implementação do motor de leitura e normalização e o harness; passou a cobrir repositório governado, documentação e divisão de tarefas. RF01–RF03 e as unidades U1, U2, U3 e U7 foram remanejadas para a Entrega 2 | Orientação do professor na Oficina Prática I (22/08): a Entrega Inicial pode ser entregue incompleta e complementada até 17/10. A equipe priorizou consolidar governança e especificação antes de começar a codificar                       |  —   |
 |             |                                                                                                                                                                                                                                                                   |                                                                                                                                                                                                                                             |      |
+| v1.2 → v1.3 | Implementação das unidades U1–U7, fichas sintéticas, API, SQLite, harness, cobertura e importação sequencial; períodos semanais definidos de segunda a domingo com parciais | A implementação e os testes focados tornaram explícitos os formatos necessários para RN03/RN07/RN08 e a validação de RNF07 | — |
 
 ---
 
