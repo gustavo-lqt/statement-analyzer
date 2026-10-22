@@ -4,7 +4,7 @@
 
 **Envie um extrato bancário. Faça perguntas sobre ele.**
 
-![Etapa](https://img.shields.io/badge/etapa-01%20%E2%80%94%20funda%C3%A7%C3%A3o-1F4E79)
+![Etapa](https://img.shields.io/badge/etapa-02%20e%2003%20%E2%80%94%20documentacao-1F4E79)
 ![Status](https://img.shields.io/badge/status-em%20desenvolvimento-C08A2E)
 ![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
@@ -14,6 +14,12 @@
 </div>
 
 Especificação técnica completa: **[`docs/SPEC.md`](docs/SPEC.md)**
+
+> **Estado As-Built (22/10/2026):** este repositório contém a documentação de produto e a
+> estrutura inicial. A API, a persistência, as fichas bancárias, o ambiente Docker e os testes
+> ainda não estão implementados. As rotas e consultas abaixo são contratos especificados, não
+> funcionalidades disponíveis para execução. Consulte [`ERROS.md`](ERROS.md) para o estado de
+> validação.
 
 ---
 
@@ -29,6 +35,8 @@ de saída e nomes de coluna de um jeito.
 **O Statement Analyzer resolve as duas coisas.** Você envia o arquivo, ele entende o formato
 do banco pela ficha declarada, normaliza os lançamentos para um modelo único e passa a
 responder consultas sobre eles.
+
+Arquitetura **prevista**:
 
 ```mermaid
 flowchart LR
@@ -52,6 +60,8 @@ número da linha, e a leitura continua (RN05).
 ---
 
 ## Funcionalidades
+
+Contratos HTTP **especificados, ainda não implementados**:
 
 | Método | Rota | Descrição |
 |:---|:---|:---|
@@ -81,47 +91,40 @@ para demonstração.
 
 ---
 
-## Como executar
+## Execução e validação
 
-Pré-requisito: **Docker**. Nada mais precisa estar instalado.
+Ainda não há uma aplicação executável neste repositório: faltam os módulos em `app/`, as
+dependências e o arquivo `docker-compose.yml`. Por isso, os comandos abaixo são o destino de
+execução definido pelo projeto, não comandos validados no estado atual.
 
 ```bash
-git clone https://github.com/<organizacao>/statement-analyzer.git
+git clone https://github.com/gustavo-lqt/statement-analyzer.git
 cd statement-analyzer
 
-docker compose up api            # API em http://localhost:8000 (docs em /docs)
-docker compose run --rm tests    # suíte de testes completa
+docker compose up api
+docker compose run --rm tests
 ```
+
+Quando a API for implementada, sua documentação interativa deverá estar em
+`http://localhost:8000/docs`. Não foi possível executar Pytest nem produzir cobertura nesta
+revisão, pois não existem testes ou código Python no repositório.
 
 ---
 
 ## Colaboração com IA
 
-**Ferramenta:** a definir entre Claude Code, Codex CLI, Cursor e Antigravity. Qualquer que
-seja a escolha, o agente é regido pelo [`CLAUDE.md`](CLAUDE.md) na raiz do repositório, que o
-obriga a seguir a `docs/SPEC.md` — para Cursor, o mesmo conteúdo é espelhado em
-`.cursorrules`; para Codex CLI, em `AGENTS.md`.
+**Ferramenta:** a equipe pode avaliar Claude Code, Codex CLI, Cursor e Antigravity segundo
+disponibilidade, integração ao fluxo e controles de privacidade. Este repositório não registra
+uma comparação empírica nem a ferramenta usada para produzir a implementação. A análise e os
+limites estão em [`docs/RELATORIO_IA.md`](docs/RELATORIO_IA.md). O agente deve seguir
+[`CLAUDE.md`](CLAUDE.md) e a fonte da verdade, `docs/SPEC.md`.
 
-**Uso no fluxo SDD:** a especificação é escrita primeiro pela equipe; o agente implementa a
-partir dela; o harness valida; o que os testes revelarem ambíguo volta como refinamento na
-`docs/SPEC.md` §8. Todo código gerado passa por Pull Request com revisão humana de outro
-integrante — nenhum merge acontece sem suíte verde.
+**Uso pretendido no fluxo SDD:** a especificação é escrita primeiro pela equipe; o agente
+propõe alterações a partir dela; testes e revisão humana verificam o resultado. Ambiguidades
+confirmadas devem voltar como refinamento na `docs/SPEC.md` §8. Esta rotina ainda não foi
+demonstrada por uma suíte neste repositório.
 
 **Prompts relevantes** ficam versionados em [`docs/prompts/`](docs/prompts/).
-
-<details>
-<summary>Exemplo de prompt usado e resultado obtido</summary>
-
-```
-Implemente a unidade U3 (app/regras.py) conforme docs/SPEC.md §4 e §7,
-com a interface definida na Issue #5. Depois rode o harness e me mostre
-o resultado. Não modifique os testes.
-```
-
-**Resultado:** motor de normalização gerado cobrindo RN01–RN06. Ajuste manual necessário em
-RN04 — o agente arredondava valores de três casas em vez de recusar a linha; detectado pelo
-teste `test_precisao_excedente_recusa_a_linha`. Ver PR #«n».
-</details>
 
 ---
 
