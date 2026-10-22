@@ -55,6 +55,7 @@ class Extrato:
     banco: str
     criado_em: str
     saldo_inicial_centavos: int
+    saldo_inicial_assumido: bool
     total_linhas: int
     aceitos: int
     rejeitados: int
