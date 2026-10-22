@@ -49,7 +49,7 @@ projeto.
 | API e persistência | FastAPI implementa upload, lista, detalhe paginado, exclusão e oito consultas; SQLite mantém todo o SQL em `app/db.py` |
 | Importação | Upload processado por stream e gravado em transação; arquivo sem lançamento válido é revertido por RN06 |
 | Docker | `Dockerfile` e `docker-compose.yml` configurados para Python 3.12, API e testes; build não foi executado neste host porque o daemon Docker estava indisponível |
-| Testes e cobertura | 65 testes passaram no Python 3.11.9; cobertura: regras 94,6%, consultas 100%, total 97,2% |
+| Testes e cobertura | 66 testes passaram no Python 3.11.9; cobertura: regras 94,6%, consultas 100%, total 97,2% |
 | Desempenho | 100.000 linhas sintéticas foram importadas em 1,25 s no host Windows/Python 3.11.9; não é certificação na máquina de referência de 2 vCPU/4 GB |
 
 A execução local ficou limitada ao Python 3.11.9 disponível. A imagem está configurada com
