@@ -3,11 +3,12 @@ from __future__ import annotations
 import sqlite3
 import threading
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from app.models import (
     Extrato,
     Lancamento,
+    NenhumaLinhaValida,
     Recusa,
     RecursoNaoEncontrado,
     ResultadoLeitura,
@@ -126,6 +127,75 @@ class Database:
                 )
                 cursor.execute("COMMIT")
                 return extrato_id
+            except Exception:
+                cursor.execute("ROLLBACK")
+                raise
+            finally:
+                cursor.close()
+
+    def criar_extrato_streaming(
+        self,
+        nome_arquivo: str,
+        banco: str,
+        criado_em: str,
+        saldo_inicial_centavos: int,
+        saldo_inicial_assumido: bool,
+        results: Iterable[Lancamento | Recusa],
+    ) -> int:
+        with self._lock:
+            cursor = self._connection.cursor()
+            try:
+                cursor.execute("BEGIN")
+                cursor.execute(
+                    """INSERT INTO extrato
+                    (nome_arquivo, banco, criado_em, saldo_inicial_centavos,
+                     saldo_inicial_assumido, total_linhas, aceitos, rejeitados)
+                    VALUES (?, ?, ?, ?, ?, 0, 0, 0)""",
+                    (
+                        nome_arquivo,
+                        banco,
+                        criado_em,
+                        saldo_inicial_centavos,
+                        int(saldo_inicial_assumido),
+                    ),
+                )
+                extract_id = int(cursor.lastrowid)
+                total = accepted = rejected = 0
+                for result in results:
+                    total += 1
+                    if isinstance(result, Recusa):
+                        rejected += 1
+                        cursor.execute(
+                            """INSERT INTO recusa
+                            (extrato_id, numero_linha, motivo, conteudo_bruto)
+                            VALUES (?, ?, ?, ?)""",
+                            (
+                                extract_id,
+                                result.numero_linha,
+                                result.motivo,
+                                result.conteudo_bruto,
+                            ),
+                        )
+                    elif isinstance(result, Lancamento):
+                        accepted += 1
+                        cursor.execute(
+                            """INSERT INTO lancamento
+                            (extrato_id, data, valor_centavos, descricao)
+                            VALUES (?, ?, ?, ?)""",
+                            (extract_id, result.data, result.valor_centavos, result.descricao),
+                        )
+                    else:
+                        raise TypeError("resultado de leitura desconhecido")
+
+                if accepted == 0:
+                    raise NenhumaLinhaValida()
+                cursor.execute(
+                    """UPDATE extrato SET total_linhas = ?, aceitos = ?, rejeitados = ?
+                    WHERE id = ?""",
+                    (total, accepted, rejected, extract_id),
+                )
+                cursor.execute("COMMIT")
+                return extract_id
             except Exception:
                 cursor.execute("ROLLBACK")
                 raise
