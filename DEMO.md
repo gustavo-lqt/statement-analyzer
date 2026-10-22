@@ -73,7 +73,7 @@ Compose ainda precisam ser executados em um host com Docker ativo.
 
 **Fala:**
 
-> A suíte local tem 65 testes aprovados, cobertura de 94,6% em regras e 100% em consultas. O
+> A suíte local tem 66 testes aprovados, cobertura de 94,6% em regras e 100% em consultas. O
 > benchmark local processou cem mil linhas sintéticas em 1,25 segundo; isso não substitui uma
 > medição de memória nem a validação nas condições exatas de hardware da especificação. O
 > ambiente Docker e Python 3.12 devem ser confirmados no host de entrega.
