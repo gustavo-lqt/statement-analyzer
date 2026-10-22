@@ -4,13 +4,13 @@
 > pelo harness que valida. Código que contraria esta especificação está errado. Especificação
 > que os testes revelarem ambígua é corrigida aqui e registrada na seção 8.
 
-| | |
-|---|---|
-| **Projeto** | Statement Analyzer |
-| **Disciplina** | Bootcamp III — Turma B — CEUB — 2026/2 |
+|                 |                                                                         |
+| --------------- | ----------------------------------------------------------------------- |
+| **Projeto**     | Statement Analyzer                                                      |
+| **Disciplina**  | Bootcamp III — Turma B — CEUB — 2026/2                                  |
 | **Repositório** | [statement-analyzer](https://github.com/gustavo-lqt/statement-analyzer) |
-| **Stack** | Python 3.12 · FastAPI · SQLite · pytest · Docker |
-| **Versão** | v1.2 — As-Built documental — 22/10/2026 |
+| **Stack**       | Python 3.12 · FastAPI · SQLite · pytest · Docker                        |
+| **Versão**      | v1.2 — As-Built documental — 22/10/2026                                 |
 
 ---
 
@@ -42,15 +42,15 @@ na base `develop` contém documentação (`README.md`, `CLAUDE.md` e esta SPEC) 
 `app/` e `tests/` com apenas marcadores `.gitkeep`. Este estado não comprova configurações
 externas do GitHub, como proteção de branches, colaboradores, Issues ou quadro de projeto.
 
-| Componente ou entrega | Estado observado |
-|---|---|
-| Documentação inicial e decisões de arquitetura | Presente em `README.md`, `CLAUDE.md` e nesta SPEC |
+| Componente ou entrega                               | Estado observado                                   |
+| --------------------------------------------------- | -------------------------------------------------- |
+| Documentação inicial e decisões de arquitetura      | Presente em `README.md`, `CLAUDE.md` e nesta SPEC  |
 | Modelos, leitura CSV, normalização, consultas e API | Não implementados; não há módulos Python em `app/` |
-| Fichas JSON de bancos | Não presentes |
-| Persistência SQLite | Não implementada |
-| Ambiente Docker e comando do harness | Não configurados; não há `docker-compose.yml` |
-| Testes Pytest e fixtures sintéticas | Não presentes; `tests/` contém somente `.gitkeep` |
-| Cobertura mínima RNF07 | Não medida; não há código nem testes a medir |
+| Fichas JSON de bancos                               | Não presentes                                      |
+| Persistência SQLite                                 | Não implementada                                   |
+| Ambiente Docker e comando do harness                | Não configurados; não há `docker-compose.yml`      |
+| Testes Pytest e fixtures sintéticas                 | Não presentes; `tests/` contém somente `.gitkeep`  |
+| Cobertura mínima RNF07                              | Não medida; não há código nem testes a medir       |
 
 RF01–RF14, RN01–RN10, RNF01–RNF07, contratos e interfaces das seções seguintes continuam
 sendo requisitos normativos para a implementação futura. Não devem ser lidos como afirmação
@@ -72,22 +72,22 @@ conta (exige o conceito de conta, hoje inexistente no modelo).
 
 ## 3. Requisitos funcionais
 
-| ID | Requisito | Entrega |
-|:---:|---|:---:|
-| RF01 | Ler um arquivo CSV aplicando a ficha do banco informada | 2 |
-| RF02 | Normalizar cada linha para o modelo canônico de Lançamento | 2 |
-| RF03 | Recusar linhas inválidas individualmente, registrando motivo e número da linha | 2 |
-| RF04 | Enviar um extrato e persistir lançamentos e recusas | 2 |
-| RF05 | Listar extratos e consultar um extrato com seus lançamentos | 2 |
-| RF06 | Apagar um extrato, em cascata com lançamentos e recusas | 2 |
-| RF07 | Suportar três fichas de banco distintas | 2 |
-| RF08 | Consulta `resumo`: entradas, saídas, saldo, média diária, período, quantidade | 2 |
-| RF09 | Consulta `saldo`: saldo final, se ficou negativo, saldo mínimo e sua data | 2 |
-| RF10 | Consultas `maior-entrada` e `maior-despesa` | 2 |
-| RF11 | Consulta `top-despesas`, com N configurável | 2 |
-| RF12 | Consulta `por-semana` | 3 |
-| RF13 | Consulta `dias-no-negativo` | 3 |
-| RF14 | Consulta `repetidos` | 3 |
+|  ID  | Requisito                                                                      | Entrega |
+| :--: | ------------------------------------------------------------------------------ | :-----: |
+| RF01 | Ler um arquivo CSV aplicando a ficha do banco informada                        |    2    |
+| RF02 | Normalizar cada linha para o modelo canônico de Lançamento                     |    2    |
+| RF03 | Recusar linhas inválidas individualmente, registrando motivo e número da linha |    2    |
+| RF04 | Enviar um extrato e persistir lançamentos e recusas                            |    2    |
+| RF05 | Listar extratos e consultar um extrato com seus lançamentos                    |    2    |
+| RF06 | Apagar um extrato, em cascata com lançamentos e recusas                        |    2    |
+| RF07 | Suportar três fichas de banco distintas                                        |    2    |
+| RF08 | Consulta `resumo`: entradas, saídas, saldo, média diária, período, quantidade  |    2    |
+| RF09 | Consulta `saldo`: saldo final, se ficou negativo, saldo mínimo e sua data      |    2    |
+| RF10 | Consultas `maior-entrada` e `maior-despesa`                                    |    2    |
+| RF11 | Consulta `top-despesas`, com N configurável                                    |    2    |
+| RF12 | Consulta `por-semana`: semanas de segunda-feira a domingo; semanas parciais no início e no fim do período são incluídas e limitadas às datas existentes no extrato | 3 |
+| RF13 | Consulta `dias-no-negativo`                                                    |    3    |
+| RF14 | Consulta `repetidos`                                                           |    3    |
 
 ---
 
@@ -95,18 +95,34 @@ conta (exige o conceito de conta, hoje inexistente no modelo).
 
 Cada regra é verificável e é citada na docstring do teste que a valida.
 
-| ID | Regra |
-|:---:|---|
+|    ID    | Regra                                                                                                                                                                                                                                                                                                    |
+| :------: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **RN01** | A data é interpretada pelo formato **declarado na ficha do banco**, nunca inferido. Formatos aceitos: `dd/mm/aaaa`, `aaaa-mm-dd`, `dd-mm-aaaa`. Data que não casa com o formato declarado, ou sintaticamente válida mas inexistente (`31/02/2026`), recusa a linha. Armazenada sempre como `AAAA-MM-DD`. |
-| **RN02** | O valor é armazenado como **inteiro em centavos**. Separador decimal e de milhar vêm da ficha; o de milhar é removido antes da conversão. Com vírgula decimal, `1.234,56` → `123456`. Ponto flutuante não é usado em nenhum ponto do fluxo monetário. |
-| **RN03** | Saída é negativa e entrada é positiva, **sempre**. Fichas `COLUNA_DC` e `COLUNAS_SEPARADAS` são convertidas na leitura; nenhuma unidade posterior conhece a convenção do banco. |
-| **RN04** | Valor com três ou mais casas decimais **recusa a linha** (`PRECISAO_INVALIDA`). Não arredonda: arredondar em silêncio é perda de informação em sistema de conferência. |
-| **RN05** | Linha inválida **não aborta a leitura**. É recusada com número da linha, motivo e conteúdo bruto, e o processamento continua. Um arquivo com recusas é uma leitura bem-sucedida. |
-| **RN06** | Arquivo em que **todas** as linhas foram recusadas devolve erro `NENHUMA_LINHA_VALIDA` e **nenhum extrato é criado**. |
-| **RN07** | O saldo inicial é opcional no envio; ausente vale zero. Quando ausente, a resposta de `dias-no-negativo` traz `saldo_inicial_assumido: true`. |
-| **RN08** | Para o saldo corrente, os lançamentos são ordenados por data crescente e os de mesma data formam um bloco: o saldo do dia é o saldo **após todos eles**. Um dia é negativo se o saldo ao fim do dia for negativo — o extrato não garante ordem interna do dia. |
-| **RN09** | Dois lançamentos são repetições do mesmo gasto quando a descrição normalizada é idêntica e o valor difere em no máximo **10%** do valor médio do grupo. Um grupo só é reportado com **três ou mais ocorrências** no período. |
-| **RN10** | Empate em `maior-entrada` ou `maior-despesa` resolve pelo lançamento de **data mais antiga**, para a resposta ser determinística. |
+| **RN02** | O valor é armazenado como **inteiro em centavos**. Separador decimal e de milhar vêm da ficha; o de milhar é removido antes da conversão. Com vírgula decimal, `1.234,56` → `123456`. Ponto flutuante não é usado em nenhum ponto do fluxo monetário.                                                    |
+| **RN03** | Saída é negativa e entrada é positiva, **sempre**. Fichas `COLUNA_DC` e `COLUNAS_SEPARADAS` são convertidas na leitura; nenhuma unidade posterior conhece a convenção do banco.                                                                                                                          |
+| **RN04** | Valor com três ou mais casas decimais **recusa a linha** (`PRECISAO_INVALIDA`). Não arredonda: arredondar em silêncio é perda de informação em sistema de conferência.                                                                                                                                   |
+| **RN05** | Linha inválida **não aborta a leitura**. É recusada com número da linha, motivo e conteúdo bruto, e o processamento continua. Um arquivo com recusas é uma leitura bem-sucedida.                                                                                                                         |
+| **RN06** | Arquivo em que **todas** as linhas foram recusadas devolve erro `NENHUMA_LINHA_VALIDA` e **nenhum extrato é criado**.                                                                                                                                                                                    |
+| **RN07** | O saldo inicial é opcional no envio; ausente vale zero. Quando ausente, a resposta de `dias-no-negativo` traz `saldo_inicial_assumido: true`.                                                                                                                                                            |
+| **RN08** | Para o saldo corrente, os lançamentos são ordenados por data crescente e os de mesma data formam um bloco: o saldo do dia é o saldo **após todos eles**. Um dia é negativo se o saldo ao fim do dia for negativo — o extrato não garante ordem interna do dia.                                           |
+| **RN09** | Dois lançamentos são repetições do mesmo gasto quando a descrição normalizada é idêntica e o valor difere em no máximo **10%** do valor médio do grupo. Um grupo só é reportado com **três ou mais ocorrências** no período.                                                                             |
+| **RN10** | Empate em `maior-entrada` ou `maior-despesa` resolve pelo lançamento de **data mais antiga**, para a resposta ser determinística.                                                                                                                                                                        |
+
+### Convenções complementares de implementação
+
+- **Ficha `NEGATIVO_SAIDA`:** usa a coluna configurada como `valor`; o sinal do valor já
+  representa entrada positiva ou saída negativa.
+- **Ficha `COLUNA_DC`:** usa as colunas configuradas `valor` e `tipo`. O valor é informado em
+  módulo; `C` significa crédito/entrada e `D` significa débito/saída. Qualquer outro código é
+  recusado como `VALOR_INVALIDO`.
+- **Ficha `COLUNAS_SEPARADAS`:** usa as colunas configuradas `credito` e `debito`; exatamente
+  uma deve conter valor em cada linha. Crédito é convertido em valor positivo e débito em
+  valor negativo. Ambas vazias ou ambas preenchidas são recusadas como `VALOR_INVALIDO`.
+- **Fichas sintéticas da entrega:** `banco-a` exercita `NEGATIVO_SAIDA`, `banco-b` exercita
+  `COLUNA_DC` e `banco-c` exercita `COLUNAS_SEPARADAS`. São formatos sintéticos, não alegações
+  de compatibilidade com instituições financeiras reais.
+- **RN04:** a precisão é determinada pelos dígitos após o separador decimal declarado; três ou
+  mais dígitos recusam a linha antes de qualquer conversão ou arredondamento.
 
 **Motivos de recusa:** `DATA_INVALIDA` · `VALOR_INVALIDO` · `PRECISAO_INVALIDA` ·
 `COLUNA_AUSENTE` · `LINHA_TRUNCADA` · `ENCODING_INVALIDO`
@@ -118,15 +134,15 @@ consecutivos colapsados e sem pontuação.
 
 ## 5. Requisitos não funcionais
 
-| ID | Requisito |
-|:---:|---|
-| RNF01 | Respostas da API em JSON; erros seguem formato único (ver §6.6) |
+|  ID   | Requisito                                                                                                                                               |
+| :---: | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| RNF01 | Respostas da API em JSON; erros seguem formato único (ver §6.6)                                                                                         |
 | RNF02 | Regras de negócio isoladas da camada HTTP — `app/regras.py` e `app/consultas.py` não importam FastAPI nem fazem I/O, e são testáveis sem subir servidor |
-| RNF03 | Suíte executável com um único comando, dentro do Docker: `docker compose run --rm tests` |
-| RNF04 | Ler arquivo de 100.000 linhas em até 60 s, em máquina de 2 vCPU e 4 GB, com leitura em streaming (memória não cresce proporcional ao arquivo) |
-| RNF05 | Nenhum extrato bancário real no repositório: toda fixture é gerada sinteticamente, com semente fixa |
-| RNF06 | Logs não registram descrição de lançamento em texto claro |
-| RNF07 | Cobertura mínima de 80% em `app/regras.py` e `app/consultas.py` (verificado na Entrega 3) |
+| RNF03 | Suíte executável com um único comando, dentro do Docker: `docker compose run --rm tests`                                                                |
+| RNF04 | Ler arquivo de 100.000 linhas em até 60 s, em máquina de 2 vCPU e 4 GB, com leitura em streaming (memória não cresce proporcional ao arquivo)           |
+| RNF05 | Nenhum extrato bancário real no repositório: toda fixture é gerada sinteticamente, com semente fixa                                                     |
+| RNF06 | Logs não registram descrição de lançamento em texto claro                                                                                               |
+| RNF07 | Cobertura mínima de 80% em `app/regras.py` e `app/consultas.py` (verificado na Entrega 3)                                                               |
 
 ---
 
@@ -154,8 +170,13 @@ consecutivos colapsados e sem pontuação.
 ### 6.2 Modelo canônico — Lançamento
 
 ```json
-{ "id": 933, "extrato_id": 1, "data": "2026-09-18",
-  "valor_centavos": -134000, "descricao": "TRANSF PIX ENVIADA" }
+{
+  "id": 933,
+  "extrato_id": 1,
+  "data": "2026-09-18",
+  "valor_centavos": -134000,
+  "descricao": "TRANSF PIX ENVIADA"
+}
 ```
 
 ### 6.3 `POST /extratos`
@@ -164,12 +185,23 @@ Entrada `multipart/form-data`: `arquivo` (obrigatório), `banco` (obrigatório),
 `saldo_inicial_centavos` (opcional, RN07).
 
 Saída `201`:
+
 ```json
-{ "id": 1, "nome_arquivo": "extrato-setembro.csv", "banco": "banco-a",
-  "criado_em": "2026-09-11T14:32:00-03:00", "saldo_inicial_centavos": 20000,
-  "total_linhas": 342, "aceitos": 340, "rejeitados": 2,
-  "recusas": [ { "linha": 87, "motivo": "DATA_INVALIDA", "conteudo": "31/02/2026;PAG*..." } ] }
+{
+  "id": 1,
+  "nome_arquivo": "extrato-setembro.csv",
+  "banco": "banco-a",
+  "criado_em": "2026-09-11T14:32:00-03:00",
+  "saldo_inicial_centavos": 20000,
+  "total_linhas": 342,
+  "aceitos": 340,
+  "rejeitados": 2,
+  "recusas": [
+    { "linha": 87, "motivo": "DATA_INVALIDA", "conteudo": "31/02/2026;PAG*..." }
+  ]
+}
 ```
+
 Erros: `400 ARQUIVO_AUSENTE` | `400 BANCO_DESCONHECIDO` | `422 ARQUIVO_VAZIO` |
 `422 NENHUMA_LINHA_VALIDA` (RN06) | `422 ENCODING_INVALIDO`
 
@@ -220,7 +252,11 @@ Erros de consulta: `404 EXTRATO_NAO_ENCONTRADO` | `422 PARAMETRO_INVALIDO`
 ### 6.6 Formato único de erro (RNF01)
 
 ```json
-{ "erro": "BANCO_DESCONHECIDO", "mensagem": "A ficha 'banco-z' não está registrada.", "regra": null }
+{
+  "erro": "BANCO_DESCONHECIDO",
+  "mensagem": "A ficha 'banco-z' não está registrada.",
+  "regra": null
+}
 ```
 
 O campo `regra` traz o identificador da RN violada quando o erro nasce de uma regra de
@@ -238,15 +274,15 @@ conhece HTTP.
         ↑ testes de integração (test_api.py)      ↑ testes de unidade (test_regras.py, test_consultas.py)
 ```
 
-| # | Unidade | Arquivo | Responsabilidade | Entrega |
-|:---:|---|---|---|:---:|
-| U1 | models | `app/models.py` | Entidades: `Extrato`, `Lancamento`, `Recusa`, `FichaBanco` | 2 |
-| U2 | leitura | `app/leitura.py` | Abre o arquivo e aplica a ficha; produz linhas cruas. Sem HTTP | 2 |
-| U3 | regras | `app/regras.py` | Motor puro de normalização e validação (RN01–RN06). Sem HTTP, sem I/O | 2 |
-| U4 | consultas | `app/consultas.py` | As oito consultas (RN07–RN10). Recebe lista de lançamentos, devolve agregados | 2 e 3 |
-| U5 | api | `app/api.py` | Camada FastAPI fina; traduz HTTP ⇄ motor e erros para o formato §6.6 | 2 |
-| U6 | db | `app/db.py` | Tabelas e acesso SQLite | 2 |
-| U7 | harness | `tests/` + `gerador/` | Fixtures sintéticas com semente e suíte de testes | 2 |
+|  #  | Unidade   | Arquivo               | Responsabilidade                                                              | Entrega |
+| :-: | --------- | --------------------- | ----------------------------------------------------------------------------- | :-----: |
+| U1  | models    | `app/models.py`       | Entidades: `Extrato`, `Lancamento`, `Recusa`, `FichaBanco`                    |    2    |
+| U2  | leitura   | `app/leitura.py`      | Abre o arquivo e aplica a ficha; produz linhas cruas. Sem HTTP                |    2    |
+| U3  | regras    | `app/regras.py`       | Motor puro de normalização e validação (RN01–RN06). Sem HTTP, sem I/O         |    2    |
+| U4  | consultas | `app/consultas.py`    | As oito consultas (RN07–RN10). Recebe lista de lançamentos, devolve agregados |  2 e 3  |
+| U5  | api       | `app/api.py`          | Camada FastAPI fina; traduz HTTP ⇄ motor e erros para o formato §6.6          |    2    |
+| U6  | db        | `app/db.py`           | Tabelas e acesso SQLite                                                       |    2    |
+| U7  | harness   | `tests/` + `gerador/` | Fixtures sintéticas com semente e suíte de testes                             |    2    |
 
 Cada unidade vira uma Issue no GitHub, com o responsável definido lá. A atribuição não é
 duplicada neste documento: a Issue é a fonte da divisão, e a autoria dos commits e dos Pull
@@ -299,19 +335,19 @@ CREATE INDEX idx_lancamento_extrato_data ON lancamento(extrato_id, data);
 
 ### Rastreabilidade regra → teste
 
-| Regra | Cenário principal | Casos de borda | Arquivo |
-|:---:|---|---|---|
-| RN01 | Data no formato da ficha converte | `31/02/2026`; data vazia; formato diferente do declarado | `tests/test_regras.py` |
-| RN02 | `1.234,56` → `123456` | valor vazio; só separador; negativo entre parênteses | `tests/test_regras.py` |
-| RN03 | Saída chega negativa | ficha `COLUNA_DC`; ficha `COLUNAS_SEPARADAS` | `tests/test_regras.py` |
-| RN04 | Duas casas passam | três casas recusa `PRECISAO_INVALIDA`; duas casas com zero à direita passa | `tests/test_regras.py` |
-| RN05 | Arquivo com 3 linhas ruins lê as demais | linha truncada no fim do arquivo; encoding errado no meio | `tests/test_regras.py` |
-| RN06 | Arquivo válido produz resultado | arquivo só com linhas ruins levanta `NenhumaLinhaValida`; arquivo vazio | `tests/test_regras.py` |
-| RN07 | Saldo inicial informado é usado | ausente marca `saldo_inicial_assumido` | `tests/test_consultas.py` |
-| RN08 | Saldo corrente por data crescente | dois lançamentos no mesmo dia cruzando o zero; conta que nunca fica negativa | `tests/test_consultas.py` |
-| RN09 | Três cobranças iguais formam grupo | duas ocorrências não formam; valor 11% acima fica fora; exatamente 10% entra | `tests/test_consultas.py` |
-| RN10 | Maior despesa única | empate resolve pela data mais antiga | `tests/test_consultas.py` |
-| §6.3 | `POST /extratos` devolve 201 com o contrato | `422 NENHUMA_LINHA_VALIDA` no formato único | `tests/test_api.py` |
+| Regra | Cenário principal                           | Casos de borda                                                               | Arquivo                   |
+| :---: | ------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------- |
+| RN01  | Data no formato da ficha converte           | `31/02/2026`; data vazia; formato diferente do declarado                     | `tests/test_regras.py`    |
+| RN02  | `1.234,56` → `123456`                       | valor vazio; só separador; negativo entre parênteses                         | `tests/test_regras.py`    |
+| RN03  | Saída chega negativa                        | ficha `COLUNA_DC`; ficha `COLUNAS_SEPARADAS`                                 | `tests/test_regras.py`    |
+| RN04  | Duas casas passam                           | três casas recusa `PRECISAO_INVALIDA`; duas casas com zero à direita passa   | `tests/test_regras.py`    |
+| RN05  | Arquivo com 3 linhas ruins lê as demais     | linha truncada no fim do arquivo; encoding errado no meio                    | `tests/test_regras.py`    |
+| RN06  | Arquivo válido produz resultado             | arquivo só com linhas ruins levanta `NenhumaLinhaValida`; arquivo vazio      | `tests/test_regras.py`    |
+| RN07  | Saldo inicial informado é usado             | ausente marca `saldo_inicial_assumido`                                       | `tests/test_consultas.py` |
+| RN08  | Saldo corrente por data crescente           | dois lançamentos no mesmo dia cruzando o zero; conta que nunca fica negativa | `tests/test_consultas.py` |
+| RN09  | Três cobranças iguais formam grupo          | duas ocorrências não formam; valor 11% acima fica fora; exatamente 10% entra | `tests/test_consultas.py` |
+| RN10  | Maior despesa única                         | empate resolve pela data mais antiga                                         | `tests/test_consultas.py` |
+| §6.3  | `POST /extratos` devolve 201 com o contrato | `422 NENHUMA_LINHA_VALIDA` no formato único                                  | `tests/test_api.py`       |
 
 ---
 
@@ -320,13 +356,13 @@ CREATE INDEX idx_lancamento_extrato_data ON lancamento(extrato_id, data);
 > Este registro é o requisito "Refinamento por Feedback". Cada ajuste vindo de teste ou de
 > revisão entra aqui com o motivo e a referência ao PR.
 
-| Versão | O que mudou | Motivo | PR |
-|:---:|---|---|:---:|
-| v1.0 → v1.1 | A consulta `recorrentes` (cobranças que se repetem **todos os meses**) virou `repetidos` (gastos que se repetem **dentro do período**), e ganhou a RN09 com limiar de 3 ocorrências e tolerância de 10% | Revisão do grupo apontou que um extrato exportado cobre normalmente **um mês**, então a consulta original não teria dados suficientes para existir. Análise entre meses foi movida para "evolução prevista", pois exige o conceito de conta | #«n» |
-| v1.0 → v1.1 | A consulta `por-mes` virou `por-semana` | Mesmo motivo: num extrato de um mês, o agrupamento mensal devolvia uma única linha, sem informação útil | #«n» |
-| v1.0 → v1.1 | RN08 passou a definir explicitamente o tratamento de lançamentos na mesma data | O cálculo de `dias-no-negativo` era ambíguo quando dois lançamentos do mesmo dia cruzavam o zero em ordens diferentes — o extrato não garante ordem interna do dia | #«n» |
-| v1.0 → v1.1 | O escopo da Entrega 1 (§2) deixou de incluir a implementação do motor de leitura e normalização e o harness; passou a cobrir repositório governado, documentação e divisão de tarefas. RF01–RF03 e as unidades U1, U2, U3 e U7 foram remanejadas para a Entrega 2 | Orientação do professor na Oficina Prática I (22/08): a Entrega Inicial pode ser entregue incompleta e complementada até 17/10. A equipe priorizou consolidar governança e especificação antes de começar a codificar | — |
-| | | | |
+|   Versão    | O que mudou                                                                                                                                                                                                                                                       | Motivo                                                                                                                                                                                                                                      |  PR  |
+| :---------: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--: |
+| v1.0 → v1.1 | A consulta `recorrentes` (cobranças que se repetem **todos os meses**) virou `repetidos` (gastos que se repetem **dentro do período**), e ganhou a RN09 com limiar de 3 ocorrências e tolerância de 10%                                                           | Revisão do grupo apontou que um extrato exportado cobre normalmente **um mês**, então a consulta original não teria dados suficientes para existir. Análise entre meses foi movida para "evolução prevista", pois exige o conceito de conta | #«n» |
+| v1.0 → v1.1 | A consulta `por-mes` virou `por-semana`                                                                                                                                                                                                                           | Mesmo motivo: num extrato de um mês, o agrupamento mensal devolvia uma única linha, sem informação útil                                                                                                                                     | #«n» |
+| v1.0 → v1.1 | RN08 passou a definir explicitamente o tratamento de lançamentos na mesma data                                                                                                                                                                                    | O cálculo de `dias-no-negativo` era ambíguo quando dois lançamentos do mesmo dia cruzavam o zero em ordens diferentes — o extrato não garante ordem interna do dia                                                                          | #«n» |
+| v1.0 → v1.1 | O escopo da Entrega 1 (§2) deixou de incluir a implementação do motor de leitura e normalização e o harness; passou a cobrir repositório governado, documentação e divisão de tarefas. RF01–RF03 e as unidades U1, U2, U3 e U7 foram remanejadas para a Entrega 2 | Orientação do professor na Oficina Prática I (22/08): a Entrega Inicial pode ser entregue incompleta e complementada até 17/10. A equipe priorizou consolidar governança e especificação antes de começar a codificar                       |  —   |
+|             |                                                                                                                                                                                                                                                                   |                                                                                                                                                                                                                                             |      |
 
 ---
 
@@ -335,6 +371,5 @@ CREATE INDEX idx_lancamento_extrato_data ON lancamento(extrato_id, data);
 - A tolerância de 10% da RN09 é adequada? Assinaturas têm valor fixo, delivery varia muito.
 - `saldo_inicial` deveria ser obrigatório? Sem ele, `dias-no-negativo` responde algo relativo
   que pode enganar quem lê rápido, mesmo com o campo `saldo_inicial_assumido`.
-- A semana de `por-semana` começa no domingo ou na segunda, e semanas parciais no início e no
-  fim do período entram ou são descartadas?
-- Quais três bancos, definidos a partir dos extratos que os integrantes conseguirem exportar.
+- Os perfis sintéticos `banco-a`, `banco-b` e `banco-c` cobrem as três convenções de sinal; a
+  escolha de bancos reais exigiria confirmação de formatos sem persistir extratos reais.
