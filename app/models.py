@@ -21,6 +21,7 @@ class LinhaCrua:
     numero_linha: int
     conteudo_bruto: str
     campos: dict[str, str]
+    motivo_recusa: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
