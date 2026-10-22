@@ -66,6 +66,22 @@ def test_encoding_invalido_gera_erro_tipado(ficha):
         list(ler(b"\xff", ficha))
 
 
+def test_encoding_invalido_no_meio_recusa_apenas_a_linha(ficha):
+    """Verifica RN05 para byte inválido em registro, preservando linhas válidas adjacentes."""
+    payload = (
+        b"Data;Historico;Valor\n"
+        b"01/09/2026;ITEM VALIDO;1,00\n"
+        b"02/09/2026;ITEM \xff INVALIDO;2,00\n"
+        b"03/09/2026;OUTRO VALIDO;3,00\n"
+    )
+    result = processar(ler(payload, ficha), ficha)
+
+    assert result.total_linhas == 3
+    assert len(result.lancamentos) == 2
+    assert result.recusas[0].motivo == "ENCODING_INVALIDO"
+    assert result.recusas[0].numero_linha == 3
+
+
 def test_arquivo_vazio_gera_erro_tipado(ficha):
     """Verifica o contrato ARQUIVO_VAZIO para conteúdo sem bytes."""
     with pytest.raises(ArquivoVazio):
