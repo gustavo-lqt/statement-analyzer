@@ -2,7 +2,17 @@
 
 from datetime import date
 
-from app.consultas import normalizar_descricao, resumo, saldo
+import pytest
+
+from app.consultas import (
+    maior_despesa,
+    maior_entrada,
+    normalizar_descricao,
+    resumo,
+    saldo,
+    top_despesas,
+)
+from app.erros import ParametroInvalido
 from app.models import Lancamento, Periodo
 
 
