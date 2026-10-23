@@ -201,6 +201,17 @@ def test_inclui_gasto_repetido_com_valores_proximos(ficha):
     assert repetidos
 
 
+def test_descricoes_vem_de_uma_lista_fixa():
+    """CONTRATO gerador: as descrições vêm de uma lista fixa; sementes diferentes sorteiam do
+    mesmo conjunto, em vez de inventar textos novos."""
+    ficha = carregar_ficha("banco-a")
+
+    def descricoes(semente: int) -> set[str]:
+        return {linha.campos["descricao"] for linha in _ler(gerar_csv(ficha, 1000, semente), ficha)}
+
+    assert descricoes(1) == descricoes(2)
+
+
 # --- linhas inválidas -----------------------------------------------------------------------
 
 

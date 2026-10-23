@@ -6,6 +6,12 @@ Todo CSV é montado dentro do próprio teste, com dados inventados (RNF05).
 from __future__ import annotations
 
 import json
+import logging
+import subprocess
+import sys
+import time
+import tracemalloc
+from pathlib import Path
 
 import pytest
 
@@ -13,6 +19,8 @@ from app import leitura
 from app.erros import ArquivoVazio, BancoDesconhecido, EncodingInvalido
 from app.leitura import carregar_ficha, ler, listar_fichas
 from app.models import ConvencaoSinal, FichaBanco, LinhaCrua, MotivoRecusa
+
+RAIZ = Path(__file__).resolve().parents[1]
 
 FICHA_VALIDA = {
     "nome": "banco-teste",
@@ -503,3 +511,71 @@ def test_ler_nao_aplica_strip_nos_campos(banco_a):
 
     assert linha.campos == {"data": "  01/09/2026 ", "descricao": " SALARIO  ", "valor": "5.800,00 "}
     assert linha.conteudo == "  01/09/2026 ; SALARIO  ;5.800,00 "
+
+
+# --- restrições do módulo ---------------------------------------------------------------------
+
+
+def test_leitura_nao_importa_fastapi_nem_sqlite3():
+    """CONTRATO app/leitura.py / ADR-001: o módulo não importa FastAPI nem acessa o banco;
+    importá-lo num processo limpo não carrega fastapi nem sqlite3."""
+    codigo = (
+        "import sys, app.leitura; "
+        "print(sorted(m for m in ('fastapi', 'sqlite3') if m in sys.modules))"
+    )
+
+    resultado = subprocess.run(
+        [sys.executable, "-c", codigo], cwd=RAIZ, capture_output=True, text=True, check=True
+    )
+
+    assert resultado.stdout.strip() == "[]"
+
+
+def test_ler_nao_registra_o_conteudo_das_linhas(banco_c, caplog, capsys):
+    """RNF06 / CONTRATO ler: o conteúdo das linhas nunca vai para log, stdout ou stderr, seja a
+    linha válida, com encoding inválido ou truncada."""
+    conteudo = (
+        "Data Lançamento;Descrição;Crédito;Débito\n01-09-2026;LOJA SIGILOSA;5.800,00;\n".encode()
+        + b"02-09-2026;LOJA SIGILOSA P\xc3O;;8,50\n"
+        + b"03-09-2026;LOJA SIGILOSA\n"
+    )
+
+    with caplog.at_level(logging.DEBUG):
+        linhas = _ler(conteudo, banco_c)
+
+    impresso = capsys.readouterr()
+    assert [linha.erro for linha in linhas] == [
+        None,
+        MotivoRecusa.ENCODING_INVALIDO,
+        MotivoRecusa.LINHA_TRUNCADA,
+    ]
+    assert "SIGILOSA" not in caplog.text
+    assert "SIGILOSA" not in impresso.out + impresso.err
+
+
+def test_ler_100_mil_linhas_dentro_do_prazo(banco_a):
+    """RNF04: um arquivo de 100.000 linhas é lido em menos de 60 s."""
+    conteudo = "Data;Histórico;Valor\n".encode("latin-1") + b"03/09/2026;PAG*MERC CENTRAL;-92,40\n" * 100_000
+
+    inicio = time.perf_counter()
+    total = sum(1 for _ in ler(conteudo, banco_a))
+    duracao = time.perf_counter() - inicio
+
+    assert total == 100_000
+    assert duracao < 60
+
+
+def test_ler_em_streaming_nao_acumula_o_arquivo_na_memoria(banco_a):
+    """RNF04: leitura em streaming; o pico de memória durante a iteração fica muito abaixo do
+    tamanho do arquivo (guardar todas as linhas passaria de 100% dele)."""
+    conteudo = "Data;Histórico;Valor\n".encode("latin-1") + b"03/09/2026;PAG*MERC CENTRAL;-92,40\n" * 20_000
+
+    tracemalloc.start()
+    try:
+        for _ in ler(conteudo, banco_a):
+            pass
+        _, pico = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    assert pico < len(conteudo) // 10
