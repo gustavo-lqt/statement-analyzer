@@ -5,14 +5,23 @@ from __future__ import annotations
 import unicodedata
 from collections import defaultdict
 from collections.abc import Sequence
-from datetime import date
+from datetime import date, timedelta
 
 from app.erros import ParametroInvalido
-from app.models import Lancamento, Periodo, Resumo, Saldo
+from app.models import (
+    DiasNoNegativo,
+    GrupoRepetido,
+    Lancamento,
+    Periodo,
+    PeriodoNegativo,
+    Resumo,
+    Saldo,
+    Semana,
+)
 
 
 def _divisao_para_zero(numerador: int, denominador: int) -> int:
-    """Divide inteiros truncando em direção a zero (não usa float)."""
+    """Divide inteiros truncando em direção a zero, só com aritmética inteira (RN02)."""
     quociente = abs(numerador) // denominador
     if numerador < 0:
         return -quociente
@@ -158,3 +167,118 @@ def top_despesas(lancamentos: Sequence[Lancamento], n: int) -> list[Lancamento]:
     ]
     despesas.sort(key=lambda item: (item[1].valor_centavos, item[1].data, item[0]))
     return [lancamento for _, lancamento in despesas[:n]]
+
+
+def por_semana(lancamentos: Sequence[Lancamento]) -> list[Semana]:
+    """Consulta por-semana (RF12, D2): semanas de segunda a domingo recortadas ao período."""
+    if not lancamentos:
+        return []
+
+    inicio = min(lancamento.data for lancamento in lancamentos)
+    fim = max(lancamento.data for lancamento in lancamentos)
+    semanas: list[Semana] = []
+    de = inicio
+    while de <= fim:
+        ate = min(de + timedelta(days=6 - de.weekday()), fim)
+        da_semana = [
+            lancamento for lancamento in lancamentos if de <= lancamento.data <= ate
+        ]
+        entradas, saidas = _somas(da_semana)
+        semanas.append(
+            Semana(
+                de=de,
+                ate=ate,
+                entradas_centavos=entradas,
+                saidas_centavos=saidas,
+                saldo_centavos=entradas + saidas,
+            )
+        )
+        de = ate + timedelta(days=1)
+    return semanas
+
+
+def dias_no_negativo(
+    lancamentos: Sequence[Lancamento], saldo_inicial: int | None
+) -> DiasNoNegativo:
+    """Consulta dias-no-negativo (RF13, RN07, RN08): dias do calendário com saldo de fim de dia < 0."""
+    assumido = saldo_inicial is None
+    inicial = 0 if saldo_inicial is None else saldo_inicial
+    if not lancamentos:
+        return DiasNoNegativo(
+            saldo_inicial_centavos=inicial,
+            saldo_inicial_assumido=assumido,
+            dias_no_negativo=0,
+            periodos=[],
+        )
+
+    totais = _totais_por_data(lancamentos)
+    dia = min(totais)
+    fim = max(totais)
+    corrente = inicial
+    total_dias = 0
+    periodos: list[PeriodoNegativo] = []
+    aberto: PeriodoNegativo | None = None
+    while dia <= fim:
+        corrente += totais.get(dia, 0)
+        if corrente < 0:
+            total_dias += 1
+            if aberto is None:
+                aberto = PeriodoNegativo(de=dia, ate=dia, saldo_minimo_centavos=corrente)
+            else:
+                aberto = PeriodoNegativo(
+                    de=aberto.de,
+                    ate=dia,
+                    saldo_minimo_centavos=min(aberto.saldo_minimo_centavos, corrente),
+                )
+        elif aberto is not None:
+            periodos.append(aberto)
+            aberto = None
+        dia += timedelta(days=1)
+    if aberto is not None:
+        periodos.append(aberto)
+
+    return DiasNoNegativo(
+        saldo_inicial_centavos=inicial,
+        saldo_inicial_assumido=assumido,
+        dias_no_negativo=total_dias,
+        periodos=periodos,
+    )
+
+
+def repetidos(lancamentos: Sequence[Lancamento]) -> list[GrupoRepetido]:
+    """Consulta repetidos (RF14, RN09, D4): 3+ despesas de mesma descrição a até 10% da média."""
+    grupos: dict[str, list[Lancamento]] = defaultdict(list)
+    for lancamento in lancamentos:
+        if lancamento.valor_centavos < 0:
+            grupos[normalizar_descricao(lancamento.descricao)].append(lancamento)
+
+    resultado: list[GrupoRepetido] = []
+    for descricao, despesas in grupos.items():
+        k = len(despesas)
+        soma = sum(despesa.valor_centavos for despesa in despesas)
+        mantidas = [
+            despesa
+            for despesa in despesas
+            if 10 * abs(despesa.valor_centavos * k - soma) <= abs(soma)
+        ]
+        if len(mantidas) < 3:
+            continue
+        total = sum(despesa.valor_centavos for despesa in mantidas)
+        resultado.append(
+            GrupoRepetido(
+                descricao_normalizada=descricao,
+                ocorrencias=len(mantidas),
+                valor_medio_centavos=_divisao_para_zero(total, len(mantidas)),
+                total_centavos=total,
+                datas=sorted(despesa.data for despesa in mantidas),
+            )
+        )
+
+    resultado.sort(
+        key=lambda grupo: (
+            -grupo.ocorrencias,
+            grupo.total_centavos,
+            grupo.descricao_normalizada,
+        )
+    )
+    return resultado
