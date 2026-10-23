@@ -5,10 +5,9 @@ Todo CSV é montado dentro do próprio teste, com dados inventados (RNF05).
 
 from __future__ import annotations
 
+import ast
 import json
 import logging
-import subprocess
-import sys
 import time
 import tracemalloc
 from pathlib import Path
@@ -516,19 +515,32 @@ def test_ler_nao_aplica_strip_nos_campos(banco_a):
 # --- restrições do módulo ---------------------------------------------------------------------
 
 
+def _modulos_importados(caminho: Path) -> set[str]:
+    """Módulos que o arquivo importa, lidos do código-fonte (``from app import db`` → app.db)."""
+    modulos: set[str] = set()
+    for no in ast.walk(ast.parse(caminho.read_text(encoding="utf-8"))):
+        if isinstance(no, ast.Import):
+            modulos.update(alias.name for alias in no.names)
+        elif isinstance(no, ast.ImportFrom):
+            base = ".".join(filter(None, ["app" if no.level else "", no.module or ""]))
+            modulos.add(base)
+            modulos.update(f"{base}.{alias.name}" for alias in no.names)
+    return modulos
+
+
 def test_leitura_nao_importa_fastapi_nem_sqlite3():
-    """CONTRATO app/leitura.py / ADR-001: o módulo não importa FastAPI nem acessa o banco;
-    importá-lo num processo limpo não carrega fastapi nem sqlite3."""
-    codigo = (
-        "import sys, app.leitura; "
-        "print(sorted(m for m in ('fastapi', 'sqlite3') if m in sys.modules))"
-    )
+    """CONTRATO app/leitura.py / ADR-001: o módulo não importa FastAPI nem acessa o banco
+    (nenhum import de fastapi, sqlite3 ou app.db no código-fonte). Lê os imports com ast, sem
+    abrir processo, porque com pytest --cov o coverage carrega sqlite3 em qualquer processo."""
+    importados = _modulos_importados(RAIZ / "app" / "leitura.py")
 
-    resultado = subprocess.run(
-        [sys.executable, "-c", codigo], cwd=RAIZ, capture_output=True, text=True, check=True
-    )
+    proibidos = {
+        modulo
+        for modulo in importados
+        if modulo.split(".")[0] in ("fastapi", "sqlite3") or modulo.startswith("app.db")
+    }
 
-    assert resultado.stdout.strip() == "[]"
+    assert proibidos == set()
 
 
 def test_ler_nao_registra_o_conteudo_das_linhas(banco_c, caplog, capsys):
