@@ -9,6 +9,9 @@ from __future__ import annotations
 
 import ast
 import re
+from pathlib import Path
+
+import pytest
 
 # Exige a forma de um comando SQL, para não confundir com "DELETE /extratos/{id}".
 COMANDO_SQL = re.compile(
@@ -151,3 +154,45 @@ def test_strings_sql_ignora_metodo_http_e_docstring() -> None:
     )
 
     assert strings_sql(fonte) == []
+
+
+# --- As guardas, aplicadas ao código de app/ --------------------------------------
+
+PASTA_APP = Path(__file__).resolve().parent.parent / "app"
+
+MOTOR_PURO = ("leitura", "regras", "consultas")
+
+# Prefixos proibidos no motor puro: HTTP, SQLite e as camadas de fora (SPEC §7).
+IMPORTS_PROIBIDOS = ("fastapi", "starlette", "sqlite3", "app.db", "app.api")
+
+
+def _fonte_do_modulo(nome: str) -> str:
+    caminho = PASTA_APP / f"{nome}.py"
+    if not caminho.exists():
+        pytest.skip(f"app/{nome}.py ainda não está nesta branch (entra pela entrega)")
+    return caminho.read_text(encoding="utf-8")
+
+
+def _proibido(modulo: str) -> bool:
+    return any(modulo == p or modulo.startswith(f"{p}.") for p in IMPORTS_PROIBIDOS)
+
+
+@pytest.mark.parametrize("nome", MOTOR_PURO)
+def test_motor_puro_nao_importa_http_sqlite_nem_camadas_externas(nome: str) -> None:
+    """RNF02, SPEC §7: leitura, regras e consultas não importam fastapi, starlette,
+    sqlite3, app.db nem app.api."""
+    importados = modulos_importados(_fonte_do_modulo(nome))
+
+    assert sorted(m for m in importados if _proibido(m)) == []
+
+
+def test_somente_db_contem_sql() -> None:
+    """SPEC §7, CLAUDE.md: nenhum arquivo de app/ além de app/db.py contém SQL."""
+    violacoes = {
+        str(caminho.relative_to(PASTA_APP)): sql
+        for caminho in sorted(PASTA_APP.rglob("*.py"))
+        if caminho != PASTA_APP / "db.py"
+        if (sql := strings_sql(caminho.read_text(encoding="utf-8")))
+    }
+
+    assert violacoes == {}
