@@ -10,9 +10,9 @@ import json
 import pytest
 
 from app import leitura
-from app.erros import BancoDesconhecido
-from app.leitura import carregar_ficha, listar_fichas
-from app.models import ConvencaoSinal, FichaBanco
+from app.erros import ArquivoVazio, BancoDesconhecido, EncodingInvalido
+from app.leitura import carregar_ficha, ler, listar_fichas
+from app.models import ConvencaoSinal, FichaBanco, LinhaCrua, MotivoRecusa
 
 FICHA_VALIDA = {
     "nome": "banco-teste",
@@ -60,6 +60,29 @@ def pasta_fichas(tmp_path, monkeypatch):
 def _gravar_ficha(pasta, nome: str, dados: dict) -> None:
     texto = json.dumps(dados, ensure_ascii=False)
     (pasta / f"{nome}.json").write_text(texto, encoding="utf-8")
+
+
+@pytest.fixture
+def banco_a() -> FichaBanco:
+    return carregar_ficha("banco-a")
+
+
+@pytest.fixture
+def banco_b() -> FichaBanco:
+    return carregar_ficha("banco-b")
+
+
+@pytest.fixture
+def banco_c() -> FichaBanco:
+    return carregar_ficha("banco-c")
+
+
+def _ler(conteudo: bytes, ficha: FichaBanco) -> list[LinhaCrua]:
+    return list(ler(conteudo, ficha))
+
+
+def _recusada(numero: int, conteudo: str, motivo: MotivoRecusa) -> LinhaCrua:
+    return LinhaCrua(numero=numero, campos={}, conteudo=conteudo, erro=motivo)
 
 
 # --- carregar_ficha / listar_fichas -------------------------------------------------------
@@ -192,3 +215,291 @@ def test_listar_fichas_so_considera_arquivos_json(pasta_fichas):
     (pasta_fichas / "leia-me.txt").write_text("não é ficha", encoding="utf-8")
 
     assert listar_fichas() == ["alfa", "meio", "zeta"]
+
+
+# --- ler -----------------------------------------------------------------------------------
+
+CABECALHO_B = b"date,description,amount,type"
+SALARIO_B = LinhaCrua(
+    numero=2,
+    campos={"data": "2026-09-01", "descricao": "SALARIO", "valor": "5800.00", "dc": "C"},
+    conteudo="2026-09-01,SALARIO,5800.00,C",
+)
+MERCADO_B = LinhaCrua(
+    numero=3,
+    campos={"data": "2026-09-03", "descricao": "PAG*MERC CENTRAL", "valor": "92.40", "dc": "D"},
+    conteudo="2026-09-03,PAG*MERC CENTRAL,92.40,D",
+)
+
+
+def test_ler_e_um_gerador(banco_b):
+    """CONTRATO ler: é um gerador, então as exceções só aparecem quando a iteração começa."""
+    linhas = ler(b"", banco_b)
+
+    with pytest.raises(ArquivoVazio):
+        next(linhas)
+
+
+def test_ler_banco_a_em_latin1(banco_a):
+    """RF01, RF07 / CONTRATO ler, regra 7: banco-a é lida em latin-1, com "Histórico" no
+    cabeçalho; cada linha sai com os campos da ficha e o número da linha física."""
+    conteudo = (
+        "Data;Histórico;Valor\r\n"
+        "01/09/2026;SALARIO;5.800,00\r\n"
+        "03/09/2026;PAG*MERC CENTRAL;-92,40\r\n"
+        "04/09/2026;PADARIA PÃO QUENTE;-8,50\r\n"
+    ).encode("latin-1")
+
+    assert _ler(conteudo, banco_a) == [
+        LinhaCrua(
+            numero=2,
+            campos={"data": "01/09/2026", "descricao": "SALARIO", "valor": "5.800,00"},
+            conteudo="01/09/2026;SALARIO;5.800,00",
+        ),
+        LinhaCrua(
+            numero=3,
+            campos={"data": "03/09/2026", "descricao": "PAG*MERC CENTRAL", "valor": "-92,40"},
+            conteudo="03/09/2026;PAG*MERC CENTRAL;-92,40",
+        ),
+        LinhaCrua(
+            numero=4,
+            campos={"data": "04/09/2026", "descricao": "PADARIA PÃO QUENTE", "valor": "-8,50"},
+            conteudo="04/09/2026;PADARIA PÃO QUENTE;-8,50",
+        ),
+    ]
+
+
+def test_ler_banco_b_com_coluna_dc(banco_b):
+    """RF01, RF07 / CONTRATO ler, regra 7: banco-b (utf-8, vírgula) entrega também a chave "dc"."""
+    conteudo = (
+        b"date,description,amount,type\n"
+        b"2026-09-01,SALARIO,5800.00,C\n"
+        b"2026-09-03,PAG*MERC CENTRAL,92.40,D\n"
+    )
+
+    assert _ler(conteudo, banco_b) == [SALARIO_B, MERCADO_B]
+
+
+def test_ler_banco_c_com_colunas_separadas(banco_c):
+    """RF01, RF07 / CONTRATO ler, regra 7: banco-c (utf-8, cabeçalho acentuado) entrega crédito e
+    débito; a célula vazia chega como texto vazio."""
+    conteudo = (
+        "Data Lançamento;Descrição;Crédito;Débito\n"
+        "01-09-2026;SALARIO;5.800,00;\n"
+        "03-09-2026;PAG*MERC CENTRAL;;92,40\n"
+    ).encode("utf-8")
+
+    assert _ler(conteudo, banco_c) == [
+        LinhaCrua(
+            numero=2,
+            campos={"data": "01-09-2026", "descricao": "SALARIO", "credito": "5.800,00", "debito": ""},
+            conteudo="01-09-2026;SALARIO;5.800,00;",
+        ),
+        LinhaCrua(
+            numero=3,
+            campos={"data": "03-09-2026", "descricao": "PAG*MERC CENTRAL", "credito": "", "debito": "92,40"},
+            conteudo="03-09-2026;PAG*MERC CENTRAL;;92,40",
+        ),
+    ]
+
+
+@pytest.mark.parametrize(
+    "quebra_cabecalho, quebra_dados",
+    [(b"\n", b"\n"), (b"\r\n", b"\r\n"), (b"\r\n", b"\n")],
+    ids=["lf", "crlf", "misturado"],
+)
+def test_ler_aceita_crlf_e_lf(banco_b, quebra_cabecalho, quebra_dados):
+    """CONTRATO ler, regra 1: a quebra pode ser \\n ou \\r\\n, e conteudo/campos saem sem ela."""
+    conteudo = (
+        CABECALHO_B + quebra_cabecalho
+        + b"2026-09-01,SALARIO,5800.00,C" + quebra_dados
+        + b"2026-09-03,PAG*MERC CENTRAL,92.40,D" + quebra_dados
+    )
+
+    assert _ler(conteudo, banco_b) == [SALARIO_B, MERCADO_B]
+
+
+def test_ler_arquivo_terminando_em_cr_sem_lf(banco_b):
+    """CONTRATO ler, regra 1 / RN05: um \\r final sem \\n não vira célula nem derruba a leitura."""
+    conteudo = CABECALHO_B + b"\r\n2026-09-01,SALARIO,5800.00,C\r"
+
+    assert _ler(conteudo, banco_b) == [SALARIO_B]
+
+
+@pytest.mark.parametrize(
+    "ficha_nome, conteudo, esperado",
+    [
+        (
+            "banco-c",
+            "﻿Data Lançamento;Descrição;Crédito;Débito\n01-09-2026;SALARIO;5.800,00;\n".encode(),
+            {"data": "01-09-2026", "descricao": "SALARIO", "credito": "5.800,00", "debito": ""},
+        ),
+        (
+            "banco-a",
+            b"\xef\xbb\xbf" + "Data;Histórico;Valor\n01/09/2026;SALARIO;5.800,00\n".encode("latin-1"),
+            {"data": "01/09/2026", "descricao": "SALARIO", "valor": "5.800,00"},
+        ),
+    ],
+    ids=["utf-8", "latin-1"],
+)
+def test_ler_descarta_bom(ficha_nome, conteudo, esperado):
+    """CONTRATO ler, regra 2: o BOM UTF-8 no início é descartado, então a primeira coluna do
+    cabeçalho é reconhecida (sem BOM grudado no nome)."""
+    [linha] = _ler(conteudo, carregar_ficha(ficha_nome))
+
+    assert linha.erro is None
+    assert linha.campos == esperado
+
+
+def test_ler_pula_linhas_em_branco_sem_perder_a_numeracao(banco_b):
+    """CONTRATO ler, regras 1 e 2 / LinhaCrua.numero: linhas em branco (ou só com espaços),
+    antes ou depois do cabeçalho, são puladas mas contam no número da linha física."""
+    conteudo = (
+        b"\n"                                       # 1
+        b"   \n"                                    # 2
+        b"date,description,amount,type\n"           # 3 cabeçalho
+        b"2026-09-01,SALARIO,5800.00,C\n"           # 4
+        b"\t \n"                                    # 5
+        b"\r\n"                                     # 6
+        b"2026-09-03,PAG*MERC CENTRAL,92.40,D\n"    # 7
+        b"\n"                                       # 8
+    )
+
+    linhas = _ler(conteudo, banco_b)
+
+    assert [linha.numero for linha in linhas] == [4, 7]
+    assert [linha.campos["descricao"] for linha in linhas] == ["SALARIO", "PAG*MERC CENTRAL"]
+
+
+@pytest.mark.parametrize(
+    "conteudo",
+    [
+        b"",
+        CABECALHO_B,
+        CABECALHO_B + b"\r\n",
+        CABECALHO_B + b"\n\n   \n\t\n",
+        b"\n \n\t\r\n",
+        b"\xef\xbb\xbf",
+    ],
+    ids=["sem bytes", "so cabecalho", "so cabecalho com quebra", "cabecalho e brancas", "so brancas", "so bom"],
+)
+def test_ler_arquivo_sem_linha_de_dados_levanta_arquivo_vazio(banco_b, conteudo):
+    """CONTRATO ler, regra 2 / SPEC §6.3: arquivo sem bytes, só com linhas em branco ou só com o
+    cabeçalho → ArquivoVazio."""
+    with pytest.raises(ArquivoVazio):
+        _ler(conteudo, banco_b)
+
+
+def test_ler_cabecalho_que_nao_decodifica_levanta_encoding_invalido(banco_c):
+    """CONTRATO ler, regra 2 / SPEC §6.3: arquivo da banco-c salvo em latin-1 (ficha diz utf-8)
+    tem cabeçalho que não decodifica → EncodingInvalido."""
+    conteudo = (
+        "Data Lançamento;Descrição;Crédito;Débito\n01-09-2026;SALARIO;5.800,00;\n"
+    ).encode("latin-1")
+
+    with pytest.raises(EncodingInvalido):
+        _ler(conteudo, banco_c)
+
+
+def test_ler_byte_invalido_no_meio_so_afeta_aquela_linha(banco_c):
+    """CONTRATO ler, regra 3 / RN05: a linha que não decodifica sai com ENCODING_INVALIDO,
+    campos vazios e conteudo com o caractere de substituição; as seguintes continuam."""
+    conteudo = (
+        "Data Lançamento;Descrição;Crédito;Débito\n01-09-2026;SALARIO;5.800,00;\n".encode()
+        + b"02-09-2026;PADARIA P\xc3O QUENTE;;8,50\n"
+        + b"03-09-2026;PAG*MERC CENTRAL;;92,40\n"
+    )
+
+    linhas = _ler(conteudo, banco_c)
+
+    assert [linha.numero for linha in linhas] == [2, 3, 4]
+    assert linhas[1] == _recusada(
+        3, "02-09-2026;PADARIA P�O QUENTE;;8,50", MotivoRecusa.ENCODING_INVALIDO
+    )
+    assert linhas[0].erro is None
+    assert linhas[2].erro is None
+    assert linhas[2].campos["debito"] == "92,40"
+
+
+@pytest.mark.parametrize(
+    "linha_ruim",
+    ["05/09/2026;TRANSF PIX ENVIADA", "05/09/2026;TRANSF PIX ENVIADA;-10,00;sobrando"],
+    ids=["menos celulas", "mais celulas"],
+)
+def test_ler_linha_com_numero_de_celulas_diferente_e_truncada(banco_a, linha_ruim):
+    """CONTRATO ler, regra 5 / RN05: menos ou mais células que o cabeçalho → LINHA_TRUNCADA, e a
+    leitura continua."""
+    conteudo = (
+        f"Data;Histórico;Valor\n{linha_ruim}\n06/09/2026;IFD*IFOOD;-42,10\n".encode("latin-1")
+    )
+
+    linhas = _ler(conteudo, banco_a)
+
+    assert linhas[0] == _recusada(2, linha_ruim, MotivoRecusa.LINHA_TRUNCADA)
+    assert linhas[1].numero == 3
+    assert linhas[1].erro is None
+
+
+def test_ler_cabecalho_sem_coluna_da_ficha_recusa_todas_as_linhas(banco_a):
+    """CONTRATO ler, regra 6: cabeçalho sem a coluna "Histórico" → toda linha de dados sai com
+    COLUNA_AUSENTE, inclusive a que também teria o número errado de células."""
+    conteudo = (
+        "Data;Descricao;Valor\n01/09/2026;SALARIO;5.800,00\n03/09/2026;PAG*MERC CENTRAL\n"
+    ).encode("latin-1")
+
+    assert _ler(conteudo, banco_a) == [
+        _recusada(2, "01/09/2026;SALARIO;5.800,00", MotivoRecusa.COLUNA_AUSENTE),
+        _recusada(3, "03/09/2026;PAG*MERC CENTRAL", MotivoRecusa.COLUNA_AUSENTE),
+    ]
+
+
+def test_ler_linha_que_nao_decodifica_continua_encoding_invalido_sem_coluna(banco_c):
+    """CONTRATO ler, regras 3 e 6: com coluna ausente no cabeçalho, a linha que nem decodifica
+    continua ENCODING_INVALIDO (a decodificação vem antes do recorte)."""
+    conteudo = "Data;Descrição;Crédito;Débito\n".encode() + b"02-09-2026;P\xc3O;;8,50\n"
+
+    assert _ler(conteudo, banco_c) == [
+        _recusada(2, "02-09-2026;P�O;;8,50", MotivoRecusa.ENCODING_INVALIDO)
+    ]
+
+
+def test_ler_ignora_colunas_extras_e_a_ordem_do_cabecalho(banco_a):
+    """CONTRATO ler, regras 6 e 7: colunas extras são ignoradas e cada campo vem da coluna com o
+    nome declarado na ficha, em qualquer posição."""
+    conteudo = (
+        "Saldo;Valor;Data;Histórico;Agência\n100,00;-92,40;03/09/2026;PAG*MERC CENTRAL;0001\n"
+    ).encode("latin-1")
+
+    [linha] = _ler(conteudo, banco_a)
+
+    assert linha.erro is None
+    assert linha.campos == {"data": "03/09/2026", "descricao": "PAG*MERC CENTRAL", "valor": "-92,40"}
+
+
+def test_ler_celula_entre_aspas_pode_conter_o_delimitador(banco_b):
+    """CONTRATO ler, regra 4: as células são separadas pelo módulo csv, respeitando aspas
+    duplas; conteudo continua sendo a linha original."""
+    conteudo = (
+        CABECALHO_B
+        + b'\n2026-09-03,"PAG*LOJA CENTRO, FILIAL 2",92.40,D'
+        + b'\n2026-09-04,"MERCADO ""BOM PRECO""",15.00,D\n'
+    )
+
+    linhas = _ler(conteudo, banco_b)
+
+    assert [linha.campos["descricao"] for linha in linhas] == [
+        "PAG*LOJA CENTRO, FILIAL 2",
+        'MERCADO "BOM PRECO"',
+    ]
+    assert [linha.erro for linha in linhas] == [None, None]
+    assert linhas[0].conteudo == '2026-09-03,"PAG*LOJA CENTRO, FILIAL 2",92.40,D'
+
+
+def test_ler_nao_aplica_strip_nos_campos(banco_a):
+    """CONTRATO ler, regra 7 / LinhaCrua.campos: o texto da célula chega cru, sem strip."""
+    conteudo = "Data;Histórico;Valor\n  01/09/2026 ; SALARIO  ;5.800,00 \n".encode("latin-1")
+
+    [linha] = _ler(conteudo, banco_a)
+
+    assert linha.campos == {"data": "  01/09/2026 ", "descricao": " SALARIO  ", "valor": "5.800,00 "}
+    assert linha.conteudo == "  01/09/2026 ; SALARIO  ;5.800,00 "

@@ -7,17 +7,23 @@ nunca registra o conteúdo das linhas em log (RNF06).
 
 from __future__ import annotations
 
+import codecs
+import csv
+import io
 import json
+from collections.abc import Iterator
 from dataclasses import fields
 from pathlib import Path
 
-from app.erros import BancoDesconhecido
+from app.erros import ArquivoVazio, BancoDesconhecido, EncodingInvalido
 from app.models import (
     COLUNAS_POR_CONVENCAO,
     ENCODINGS,
     FORMATOS_DATA,
     ConvencaoSinal,
     FichaBanco,
+    LinhaCrua,
+    MotivoRecusa,
 )
 
 PASTA_FICHAS = Path(__file__).parent / "fichas"
@@ -40,6 +46,78 @@ def carregar_ficha(nome: str) -> FichaBanco:
 def listar_fichas() -> list[str]:
     """Nomes das fichas registradas em app/fichas, em ordem alfabética (RF07)."""
     return sorted(caminho.stem for caminho in PASTA_FICHAS.glob("*.json"))
+
+
+def ler(conteudo: bytes, ficha: FichaBanco) -> Iterator[LinhaCrua]:
+    """Recorta cada linha de dados do CSV pela ficha do banco (RF01, RN05, RNF04).
+
+    É um gerador que decodifica uma linha por vez: ArquivoVazio e EncodingInvalido só
+    aparecem quando a iteração começa. Linha ruim sai com ``erro`` preenchido e a leitura
+    continua (RN05).
+    """
+    if conteudo.startswith(codecs.BOM_UTF8):
+        conteudo = conteudo[len(codecs.BOM_UTF8):]
+    linhas = _linhas_preenchidas(conteudo)
+    primeira = next(linhas, None)
+    if primeira is None:
+        raise ArquivoVazio("O arquivo está vazio.")
+    cabecalho = _decodificar_cabecalho(primeira[1], ficha)
+    indices = _indices_das_colunas(cabecalho, ficha)
+    sem_dados = True
+    for numero, bruta in linhas:
+        sem_dados = False
+        yield _recortar(numero, bruta, ficha, len(cabecalho), indices)
+    if sem_dados:
+        raise ArquivoVazio("O arquivo não tem nenhuma linha de dados.")
+
+
+def _linhas_preenchidas(conteudo: bytes) -> Iterator[tuple[int, bytes]]:
+    """Linhas físicas que não estão em branco, numeradas a partir de 1, sem \\n ou \\r\\n."""
+    for numero, bruta in enumerate(io.BytesIO(conteudo), start=1):
+        bruta = bruta.removesuffix(b"\n").removesuffix(b"\r")
+        if bruta.strip():
+            yield numero, bruta
+
+
+def _decodificar_cabecalho(bruta: bytes, ficha: FichaBanco) -> list[str]:
+    try:
+        texto = bruta.decode(ficha.encoding)
+    except UnicodeDecodeError:
+        raise EncodingInvalido(f"O cabeçalho do arquivo não está em {ficha.encoding}.") from None
+    return _celulas(texto, ficha.delimitador)
+
+
+def _indices_das_colunas(cabecalho: list[str], ficha: FichaBanco) -> dict[str, int] | None:
+    """Posição de cada chave lógica no cabeçalho, ou None se falta alguma coluna da ficha."""
+    if any(nome not in cabecalho for nome in ficha.colunas.values()):
+        return None
+    return {chave: cabecalho.index(nome) for chave, nome in ficha.colunas.items()}
+
+
+def _recortar(
+    numero: int,
+    bruta: bytes,
+    ficha: FichaBanco,
+    total_celulas: int,
+    indices: dict[str, int] | None,
+) -> LinhaCrua:
+    """Decodifica a linha e recorta as células; a primeira falha define o erro (RN05)."""
+    try:
+        texto = bruta.decode(ficha.encoding)
+    except UnicodeDecodeError:
+        texto = bruta.decode(ficha.encoding, errors="replace")
+        return LinhaCrua(numero, {}, texto, MotivoRecusa.ENCODING_INVALIDO)
+    if indices is None:
+        return LinhaCrua(numero, {}, texto, MotivoRecusa.COLUNA_AUSENTE)
+    celulas = _celulas(texto, ficha.delimitador)
+    if len(celulas) != total_celulas:
+        return LinhaCrua(numero, {}, texto, MotivoRecusa.LINHA_TRUNCADA)
+    return LinhaCrua(numero, {chave: celulas[i] for chave, i in indices.items()}, texto)
+
+
+def _celulas(texto: str, delimitador: str) -> list[str]:
+    """Separa as células com o módulo csv, respeitando aspas duplas."""
+    return next(csv.reader([texto], delimiter=delimitador))
 
 
 def _montar_ficha(dados: object, origem: str) -> FichaBanco:
