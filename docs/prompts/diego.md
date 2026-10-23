@@ -98,6 +98,12 @@ origin/entrega). Corrija só o que estiver nos meus arquivos.
   FastAPI nem acessar o banco, nunca registrar o conteúdo das linhas (RNF06), leitura de
   100.000 linhas no prazo e em streaming (RNF04) e descrições do gerador vindas de uma lista
   fixa. Cada uma ganhou um teste, validado por mutação.
+- **O teste de imports quebrava com cobertura.** A primeira versão de
+  `test_leitura_nao_importa_fastapi_nem_sqlite3` abria um processo Python e olhava
+  `sys.modules`. Com `pytest --cov`, que é como o Docker roda a suíte, o pytest-cov injeta o
+  `coverage` nesse processo, e o `coverage` carrega `sqlite3` por conta própria: o teste acusava
+  um import que não vinha do `leitura.py`. Apareceu na revisão do Gustavo no PR; o teste passou
+  a ler os imports do arquivo com `ast`, sem abrir processo.
 - **A branch nasceu rastreando `origin/entrega`.** Um `git push` sem argumentos poderia mirar
   a `entrega`; a IA desfez o vínculo e o push foi feito com `git push -u origin feature/2-leitura`.
 
@@ -131,5 +137,5 @@ recortada").
 
 Nenhuma linha de código foi editada à mão até a abertura do PR. Minhas intervenções foram de
 direção: interromper a primeira execução e reenviar o pedido com o prompt completo, pedir os
-commits sem a IA como coautora e autorizar o push e a abertura do PR junto com o prompt de
-revisão.
+commits sem a IA como coautora, autorizar o push e a abertura do PR junto com o prompt de
+revisão e repassar à IA a revisão do Gustavo sobre o teste que falhava com `--cov`.
