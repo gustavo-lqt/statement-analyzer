@@ -1,0 +1,11 @@
+{
+  "nome": "banco-c",
+  "delimitador": ";",
+  "encoding": "utf-8",
+  "formato_data": "dd-mm-aaaa",
+  "separador_decimal": ",",
+  "separador_milhar": ".",
+  "convencao_sinal": "COLUNAS_SEPARADAS",
+  "colunas": { "data": "Data Lançamento", "descricao": "Descrição",
+               "credito": "Crédito", "debito": "Débito" }
+}

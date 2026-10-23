@@ -1,0 +1,10 @@
+{
+  "nome": "banco-b",
+  "delimitador": ",",
+  "encoding": "utf-8",
+  "formato_data": "aaaa-mm-dd",
+  "separador_decimal": ".",
+  "separador_milhar": "",
+  "convencao_sinal": "COLUNA_DC",
+  "colunas": { "data": "date", "descricao": "description", "valor": "amount", "dc": "type" }
+}

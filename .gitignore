@@ -21,3 +21,11 @@ htmlcov/
 .vscode/
 .idea/
 .DS_Store
+
+# Instruções individuais da divisão de tarefas (distribuídas em privado, não versionadas)
+docs/tarefas/
+
+# Arquivos gerados pelo plugin Superpowers (planos e worktrees locais)
+docs/plans/
+docs/superpowers/
+.worktrees/

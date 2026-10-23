@@ -1,4 +1,4 @@
-# Especificação Técnica — Statement Analyzer (v1.1)
+# Especificação Técnica — Statement Analyzer (v1.2)
 
 > **Fonte da verdade do projeto.** Este documento é lido pelo agente de IA que implementa e
 > pelo harness que valida. Código que contraria esta especificação está errado. Especificação
@@ -10,7 +10,7 @@
 | **Disciplina** | Bootcamp III — Turma B — CEUB — 2026/2 |
 | **Repositório** | [statement-analyzer](https://github.com/gustavo-lqt/statement-analyzer) |
 | **Stack** | Python 3.12 · FastAPI · SQLite · pytest · Docker |
-| **Versão** | v1.1 — 11/09/2026 |
+| **Versão** | v1.2 — 22/10/2026 |
 
 ---
 
@@ -269,7 +269,7 @@ maior_entrada(lancamentos) -> Lancamento | None      # desempate por RN10
 maior_despesa(lancamentos) -> Lancamento | None      # desempate por RN10
 top_despesas(lancamentos, n: int) -> list[Lancamento]
 por_semana(lancamentos) -> list[Semana]
-dias_no_negativo(lancamentos, saldo_inicial: int) -> DiasNoNegativo   # RN07, RN08
+dias_no_negativo(lancamentos, saldo_inicial: int | None) -> DiasNoNegativo   # RN07, RN08 (None = assumido, D3)
 repetidos(lancamentos) -> list[GrupoRepetido]                          # RN09
 ```
 
@@ -278,7 +278,7 @@ repetidos(lancamentos) -> list[GrupoRepetido]                          # RN09
 ```sql
 CREATE TABLE extrato (
     id INTEGER PRIMARY KEY, nome_arquivo TEXT NOT NULL, banco TEXT NOT NULL,
-    criado_em TEXT NOT NULL, saldo_inicial_centavos INTEGER NOT NULL DEFAULT 0,
+    criado_em TEXT NOT NULL, saldo_inicial_centavos INTEGER,
     total_linhas INTEGER NOT NULL, aceitos INTEGER NOT NULL, rejeitados INTEGER NOT NULL);
 
 CREATE TABLE lancamento (
@@ -323,15 +323,25 @@ CREATE INDEX idx_lancamento_extrato_data ON lancamento(extrato_id, data);
 | v1.0 → v1.1 | A consulta `por-mes` virou `por-semana` | Mesmo motivo: num extrato de um mês, o agrupamento mensal devolvia uma única linha, sem informação útil | #«n» |
 | v1.0 → v1.1 | RN08 passou a definir explicitamente o tratamento de lançamentos na mesma data | O cálculo de `dias-no-negativo` era ambíguo quando dois lançamentos do mesmo dia cruzavam o zero em ordens diferentes — o extrato não garante ordem interna do dia | #«n» |
 | v1.0 → v1.1 | O escopo da Entrega 1 (§2) deixou de incluir a implementação do motor de leitura e normalização e o harness; passou a cobrir repositório governado, documentação e divisão de tarefas. RF01–RF03 e as unidades U1, U2, U3 e U7 foram remanejadas para a Entrega 2 | Orientação do professor na Oficina Prática I (22/08): a Entrega Inicial pode ser entregue incompleta e complementada até 17/10. A equipe priorizou consolidar governança e especificação antes de começar a codificar | — |
+| v1.1 → v1.2 | Os três bancos são as fichas sintéticas `banco-a`, `banco-b` e `banco-c`, que juntas cobrem as três convenções de sinal, os três formatos de data e os dois encodings (D1) | Detalhar o contrato para permitir trabalho paralelo | #«n» |
+| v1.1 → v1.2 | A semana de `por-semana` vai de segunda a domingo; semanas parciais nas pontas entram, recortadas ao período do extrato (D2) | Detalhar o contrato para permitir trabalho paralelo | #«n» |
+| v1.1 → v1.2 | O saldo inicial continua opcional; quando não informado é gravado como `NULL` (a coluna `saldo_inicial_centavos` perde o `NOT NULL DEFAULT 0`). As consultas usam 0 nesse caso, e `dias-no-negativo` devolve `saldo_inicial_assumido: true` (D3) | Detalhar o contrato para permitir trabalho paralelo | #«n» |
+| v1.1 → v1.2 | A tolerância de 10% da RN09 é mantida, com o algoritmo exato de `repetidos` definido no contrato da Entrega 2 (D4) | Detalhar o contrato para permitir trabalho paralelo | #«n» |
+| v1.1 → v1.2 | `maior-entrada` e `maior-despesa` sem nenhum lançamento do tipo pedido devolvem `200` com corpo `null` (D5) | Detalhar o contrato para permitir trabalho paralelo | #«n» |
+| v1.1 → v1.2 | `GET /extratos/{id}` pagina com `limite` (padrão 100, de 1 a 1000) e `offset` (padrão 0) (D6) | Detalhar o contrato para permitir trabalho paralelo | #«n» |
+| v1.1 → v1.2 | As oito consultas entram já na Entrega 2 (D7) | Detalhar o contrato para permitir trabalho paralelo | #«n» |
 | | | | |
 
 ---
 
 ## 9. Decisões em aberto
 
-- A tolerância de 10% da RN09 é adequada? Assinaturas têm valor fixo, delivery varia muito.
-- `saldo_inicial` deveria ser obrigatório? Sem ele, `dias-no-negativo` responde algo relativo
-  que pode enganar quem lê rápido, mesmo com o campo `saldo_inicial_assumido`.
-- A semana de `por-semana` começa no domingo ou na segunda, e semanas parciais no início e no
-  fim do período entram ou são descartadas?
-- Quais três bancos, definidos a partir dos extratos que os integrantes conseguirem exportar.
+- ~~A tolerância de 10% da RN09 é adequada? Assinaturas têm valor fixo, delivery varia muito.~~ **Resolvida em v1.2 (D4):** a tolerância de 10% é mantida.
+- ~~`saldo_inicial` deveria ser obrigatório? Sem ele, `dias-no-negativo` responde algo relativo
+  que pode enganar quem lê rápido, mesmo com o campo `saldo_inicial_assumido`.~~ **Resolvida em v1.2 (D3):** continua
+  opcional; ausente é gravado como `NULL` e `dias-no-negativo` marca `saldo_inicial_assumido: true`.
+- ~~A semana de `por-semana` começa no domingo ou na segunda, e semanas parciais no início e no
+  fim do período entram ou são descartadas?~~ **Resolvida em v1.2 (D2):** segunda a domingo;
+  semanas parciais entram, recortadas ao período.
+- ~~Quais três bancos, definidos a partir dos extratos que os integrantes conseguirem exportar.~~
+  **Resolvida em v1.2 (D1):** fichas sintéticas `banco-a`, `banco-b` e `banco-c`.
