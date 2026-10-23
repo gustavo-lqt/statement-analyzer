@@ -1,5 +1,8 @@
 """U7 — Gerador de extratos CSV inventados, no formato exato de cada ficha (Issue #4).
 
+    python -m gerador.gerar --banco banco-a --linhas 300 --semente 42 --invalidas 5 \\
+        --saida dados/extrato-banco-a.csv
+
 Tudo sai de um único ``random.Random(semente)``: a mesma semente gera os mesmos bytes
 (RNF05). Os valores são ``int`` em centavos e só viram texto na formatação, sem ``float``
 (RN02). Nenhum dado bancário real: as descrições vêm de uma lista fixa e fictícia.
@@ -7,11 +10,14 @@ Tudo sai de um único ``random.Random(semente)``: a mesma semente gera os mesmos
 
 from __future__ import annotations
 
+import argparse
 import csv
 import io
 import random
 from dataclasses import dataclass
+from pathlib import Path
 
+from app.leitura import carregar_ficha, listar_fichas
 from app.models import COLUNAS_POR_CONVENCAO, ConvencaoSinal, FichaBanco, MotivoRecusa
 
 ANO = 2026
@@ -138,3 +144,32 @@ def _campos_de_valor(numero: str, entrada: bool, convencao: ConvencaoSinal) -> d
     if convencao is ConvencaoSinal.COLUNA_DC:
         return {"valor": numero, "dc": "C" if entrada else "D"}
     return {"credito": numero if entrada else "", "debito": "" if entrada else numero}
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI: grava em --saida um extrato inventado no formato da ficha --banco (Issue #4).
+
+    Imprime só a contagem e o caminho, nunca o conteúdo das linhas (RNF06).
+    """
+    parser = argparse.ArgumentParser(
+        prog="python -m gerador.gerar",
+        description="Gera um extrato CSV inventado no formato da ficha do banco.",
+    )
+    parser.add_argument("--banco", required=True, choices=listar_fichas(), help="ficha em app/fichas")
+    parser.add_argument("--linhas", required=True, type=int, help="quantidade de lançamentos")
+    parser.add_argument("--semente", required=True, type=int, help="mesma semente, mesmos bytes")
+    parser.add_argument("--invalidas", type=int, default=0, help="linhas com defeito (padrão: 0)")
+    parser.add_argument("--saida", required=True, type=Path, help="arquivo CSV a gravar")
+    args = parser.parse_args(argv)
+    try:
+        conteudo = gerar_csv(carregar_ficha(args.banco), args.linhas, args.semente, args.invalidas)
+    except ValueError as erro:
+        parser.error(str(erro))
+    args.saida.parent.mkdir(parents=True, exist_ok=True)
+    args.saida.write_bytes(conteudo)
+    print(f"{args.linhas} linhas ({args.invalidas} inválidas) gravadas em {args.saida}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

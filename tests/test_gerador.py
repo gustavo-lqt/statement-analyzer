@@ -17,7 +17,7 @@ import pytest
 
 from app.leitura import carregar_ficha, ler
 from app.models import ConvencaoSinal, FichaBanco, LinhaCrua, MotivoRecusa
-from gerador.gerar import gerar_csv, gerar_extrato
+from gerador.gerar import gerar_csv, gerar_extrato, main
 
 RAIZ = Path(__file__).resolve().parents[1]
 BANCOS = ["banco-a", "banco-b", "banco-c"]
@@ -246,3 +246,68 @@ def test_parametros_invalidos_levantam_value_error(linhas, invalidas):
     """CONTRATO gerador: invalidas fora de 0..linhas, ou linhas negativo, não gera nada."""
     with pytest.raises(ValueError):
         gerar_csv(carregar_ficha("banco-a"), linhas, 1, invalidas)
+
+
+# --- CLI ------------------------------------------------------------------------------------
+
+
+def _argumentos(banco: str, saida: Path, *extras: str) -> list[str]:
+    return ["--banco", banco, "--linhas", "20", "--semente", "3", "--saida", str(saida), *extras]
+
+
+def test_cli_grava_o_mesmo_csv_que_gerar_csv(tmp_path, capsys):
+    """CONTRATO gerador (CLI) / RNF06: --banco --linhas --semente --invalidas --saida grava os
+    bytes de gerar_csv, cria a pasta da saída e não ecoa nenhuma linha do extrato."""
+    saida = tmp_path / "dados" / "extrato.csv"
+
+    codigo = main(_argumentos("banco-b", saida, "--invalidas", "2"))
+
+    assert codigo == 0
+    assert saida.read_bytes() == gerar_csv(carregar_ficha("banco-b"), 20, 3, 2)
+    impresso = capsys.readouterr().out
+    assert all(linha not in impresso for linha in saida.read_text(encoding="utf-8").splitlines())
+
+
+def test_cli_invalidas_e_opcional(tmp_path):
+    """CONTRATO gerador (CLI): sem --invalidas, nenhuma linha inválida (como em gerar_csv)."""
+    saida = tmp_path / "extrato.csv"
+
+    main(_argumentos("banco-c", saida))
+
+    assert saida.read_bytes() == gerar_csv(carregar_ficha("banco-c"), 20, 3)
+
+
+def test_cli_recusa_banco_desconhecido(tmp_path):
+    """CONTRATO gerador (CLI): --banco precisa ser uma ficha registrada; erro de uso sai com 2."""
+    saida = tmp_path / "extrato.csv"
+
+    with pytest.raises(SystemExit) as erro:
+        main(_argumentos("banco-z", saida))
+
+    assert erro.value.code == 2
+    assert not saida.exists()
+
+
+def test_cli_recusa_invalidas_maior_que_linhas(tmp_path):
+    """CONTRATO gerador (CLI): --invalidas maior que --linhas é erro de uso e não grava nada."""
+    saida = tmp_path / "extrato.csv"
+
+    with pytest.raises(SystemExit) as erro:
+        main(_argumentos("banco-a", saida, "--invalidas", "21"))
+
+    assert erro.value.code == 2
+    assert not saida.exists()
+
+
+def test_cli_roda_como_modulo(tmp_path):
+    """CONTRATO gerador (CLI): python -m gerador.gerar grava o arquivo pedido."""
+    saida = tmp_path / "extrato.csv"
+
+    subprocess.run(
+        [sys.executable, "-m", "gerador.gerar", *_argumentos("banco-a", saida, "--invalidas", "1")],
+        cwd=RAIZ,
+        capture_output=True,
+        check=True,
+    )
+
+    assert saida.read_bytes() == gerar_csv(carregar_ficha("banco-a"), 20, 3, 1)
