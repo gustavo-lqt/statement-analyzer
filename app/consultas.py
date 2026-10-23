@@ -7,6 +7,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 from datetime import date
 
+from app.erros import ParametroInvalido
 from app.models import Lancamento, Periodo, Resumo, Saldo
 
 
@@ -105,3 +106,55 @@ def saldo(lancamentos: Sequence[Lancamento], saldo_inicial: int) -> Saldo:
         saldo_minimo_centavos=minimo if minimo is not None else saldo_inicial,
         data_saldo_minimo=data_minimo,
     )
+
+
+def maior_entrada(lancamentos: Sequence[Lancamento]) -> Lancamento | None:
+    """Consulta maior-entrada (RF10, RN10): maior positivo; empate pela data mais antiga."""
+    vencedor: Lancamento | None = None
+    for lancamento in lancamentos:
+        if lancamento.valor_centavos <= 0:
+            continue
+        if vencedor is None:
+            vencedor = lancamento
+            continue
+        if lancamento.valor_centavos > vencedor.valor_centavos:
+            vencedor = lancamento
+        elif (
+            lancamento.valor_centavos == vencedor.valor_centavos
+            and lancamento.data < vencedor.data
+        ):
+            vencedor = lancamento
+    return vencedor
+
+
+def maior_despesa(lancamentos: Sequence[Lancamento]) -> Lancamento | None:
+    """Consulta maior-despesa (RF10, RN10): mais negativa; empate pela data mais antiga."""
+    vencedor: Lancamento | None = None
+    for lancamento in lancamentos:
+        if lancamento.valor_centavos >= 0:
+            continue
+        if vencedor is None:
+            vencedor = lancamento
+            continue
+        if lancamento.valor_centavos < vencedor.valor_centavos:
+            vencedor = lancamento
+        elif (
+            lancamento.valor_centavos == vencedor.valor_centavos
+            and lancamento.data < vencedor.data
+        ):
+            vencedor = lancamento
+    return vencedor
+
+
+def top_despesas(lancamentos: Sequence[Lancamento], n: int) -> list[Lancamento]:
+    """Consulta top-despesas (RF11, RN10): as n saídas mais negativas, com o mesmo desempate."""
+    if n < 1 or n > 100:
+        raise ParametroInvalido("n deve estar entre 1 e 100.")
+
+    despesas = [
+        (indice, lancamento)
+        for indice, lancamento in enumerate(lancamentos)
+        if lancamento.valor_centavos < 0
+    ]
+    despesas.sort(key=lambda item: (item[1].valor_centavos, item[1].data, item[0]))
+    return [lancamento for _, lancamento in despesas[:n]]
