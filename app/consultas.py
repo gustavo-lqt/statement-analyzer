@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import unicodedata
+from collections import defaultdict
 from collections.abc import Sequence
 from datetime import date
 
-from app.models import Lancamento, Periodo, Resumo
+from app.models import Lancamento, Periodo, Resumo, Saldo
 
 
 def _divisao_para_zero(numerador: int, denominador: int) -> int:
@@ -27,6 +28,13 @@ def _somas(lancamentos: Sequence[Lancamento]) -> tuple[int, int]:
         elif valor < 0:
             saidas += valor
     return entradas, saidas
+
+
+def _totais_por_data(lancamentos: Sequence[Lancamento]) -> dict[date, int]:
+    totais: dict[date, int] = defaultdict(int)
+    for lancamento in lancamentos:
+        totais[lancamento.data] += lancamento.valor_centavos
+    return totais
 
 
 def normalizar_descricao(texto: str) -> str:
@@ -63,4 +71,37 @@ def resumo(lancamentos: Sequence[Lancamento]) -> Resumo:
         saidas_centavos=saidas,
         saldo_centavos=entradas + saidas,
         media_diaria_gasto_centavos=_divisao_para_zero(saidas, dias),
+    )
+
+
+def saldo(lancamentos: Sequence[Lancamento], saldo_inicial: int) -> Saldo:
+    """Consulta saldo (RF09, RN08): saldo por bloco de dia, mínimo e se ficou negativo."""
+    if not lancamentos:
+        return Saldo(
+            saldo_inicial_centavos=saldo_inicial,
+            saldo_final_centavos=saldo_inicial,
+            ficou_negativo=saldo_inicial < 0,
+            saldo_minimo_centavos=saldo_inicial,
+            data_saldo_minimo=None,
+        )
+
+    totais = _totais_por_data(lancamentos)
+    corrente = saldo_inicial
+    minimo: int | None = None
+    data_minimo: date | None = None
+    for dia in sorted(totais):
+        corrente += totais[dia]
+        if minimo is None or corrente < minimo:
+            minimo = corrente
+            data_minimo = dia
+
+    saldo_final = saldo_inicial + sum(
+        lancamento.valor_centavos for lancamento in lancamentos
+    )
+    return Saldo(
+        saldo_inicial_centavos=saldo_inicial,
+        saldo_final_centavos=saldo_final,
+        ficou_negativo=minimo is not None and minimo < 0,
+        saldo_minimo_centavos=minimo if minimo is not None else saldo_inicial,
+        data_saldo_minimo=data_minimo,
     )
