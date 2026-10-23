@@ -15,7 +15,19 @@ agente leu `CLAUDE.md`, `docs/SPEC.md`, `docs/tarefas/00-LEIA-PRIMEIRO.md` e
 
 Commits `dea9aad`, `bbf6e4a`, `6b39003` e `8654c96`.
 
-> **TODO (Italo):** colar aqui o prompt dessa primeira rodada, ou resumir o que foi pedido.
+O prompt original dessa rodada não ficou salvo. Este resumo foi reconstruído a partir do
+histórico do git:
+
+- `dea9aad`: `normalizar_descricao` e `resumo`, com a divisão truncada em direção a zero
+  (`_divisao_para_zero`) e 9 testes (normalização e média do exemplo da SPEC).
+- `bbf6e4a`: `saldo` por blocos de dia (RN08), com 7 testes (lista embaralhada, mesmo dia
+  cruzando o zero, saldo exatamente zero, empate de mínimo, lista vazia).
+- `6b39003`: `maior_entrada`, `maior_despesa` e `top_despesas` (RN10), **sem testes**.
+- `8654c96`: só acrescenta os imports dessas três funções no teste, apesar da mensagem
+  "nova consulta para despesas por categoria".
+
+A rodada parou aí: `por_semana`, `dias_no_negativo` e `repetidos` ficaram de fora, e a
+cobertura de `app/consultas.py` ficou em 67%.
 
 ### 2. Prompt de implementação (do `04-italo.md`, na íntegra)
 
@@ -143,6 +155,17 @@ Todas têm teste e ficam abertas à revisão de quem aprovar o PR.
 
 ## O que eu corrigi à mão
 
-> **TODO (Italo):** registrar aqui o que você editou à mão. Na segunda rodada nenhuma linha de
-> código foi editada à mão; as intervenções foram de direção (enviar o prompt e a lista de
-> pendências, autorizar commits, push e PR e fazer o login do `gh` no navegador).
+Não editei nenhuma linha de código à mão. O meu trabalho foi revisar e decidir:
+
+- **Conferi o resultado da primeira rodada** e vi o que faltava: três das oito consultas,
+  os testes de `maior_entrada`, `maior_despesa` e `top_despesas` e a cobertura mínima de 80%
+  (estava em 67%).
+- **Pedi a segunda rodada**, mandando o prompt completo do `04-italo.md` junto com a lista de
+  pendências.
+- **Notei a mensagem errada do commit `8654c96`.** "Despesas por categoria" não corresponde ao
+  que o commit faz e é justamente algo fora do escopo (SPEC §2). Decidi não reescrever o
+  histórico, porque a branch já estava no `origin`, e registrar o erro aqui e na descrição do
+  PR. Nada de categoria foi implementado.
+- **Conferi o PR #17 e o checklist "Pronto quando"**: testes verdes, cobertura, grep de
+  `float`/`round(` e o diff só com os meus arquivos. Autorizei os commits, o push e a abertura
+  do PR, e fiz o login do `gh` no navegador.
