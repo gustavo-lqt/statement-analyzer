@@ -1,0 +1,14 @@
+services:
+  api:
+    build: .
+    command: uvicorn app.api:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./dados:/code/dados
+    environment:
+      STATEMENT_DB: /code/dados/statement.db
+
+  tests:
+    build: .
+    command: pytest -q --cov=app.regras --cov=app.consultas --cov-report=term-missing
