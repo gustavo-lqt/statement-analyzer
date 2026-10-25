@@ -549,6 +549,16 @@ def test_erro_inesperado_devolve_500_sem_detalhes() -> None:
     assert "closed" not in resposta.text.lower()
 
 
+def test_rota_inexistente_devolve_404_no_formato_unico(cliente: TestClient) -> None:
+    """§6.6, RNF01: rota que não existe → 404 ROTA_INEXISTENTE, no formato único de erro."""
+    assert_erro(cliente.get("/extratos/1/nao-existe"), 404, "ROTA_INEXISTENTE")
+
+
+def test_metodo_nao_permitido_devolve_405_no_formato_unico(cliente: TestClient) -> None:
+    """§6.6, RNF01: método que a rota não aceita → 405 METODO_NAO_PERMITIDO, no formato único."""
+    assert_erro(cliente.put("/extratos"), 405, "METODO_NAO_PERMITIDO")
+
+
 def test_documentacao_openapi_acessivel(cliente: TestClient) -> None:
     """Issue #9: a documentação OpenAPI fica em /docs e descreve as rotas."""
     assert cliente.get("/docs").status_code == 200

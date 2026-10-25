@@ -20,6 +20,7 @@ from typing import Annotated, Any
 from fastapi import Depends, FastAPI, File, Form, Query, Request, Response, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import consultas, db, leitura, regras
 from app.erros import (
@@ -37,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Statement Analyzer",
-    version="1.4",
+    version="1.0.0",
     description="Lê extratos bancários em CSV pela ficha do banco e responde consultas "
     "de análise sobre os lançamentos. Ver docs/SPEC.md.",
 )
@@ -92,6 +93,21 @@ async def _tratar_erro_dominio(request: Request, exc: ErroDominio) -> JSONRespon
 @app.exception_handler(ErroProtocolo)
 async def _tratar_erro_protocolo(request: Request, exc: ErroProtocolo) -> JSONResponse:
     return _resposta_erro(exc.status, exc.codigo, exc.mensagem)
+
+
+# Erros de roteamento do próprio FastAPI, que também saem no formato único (RNF01).
+ERROS_DE_ROTA: dict[int, tuple[str, str]] = {
+    404: ("ROTA_INEXISTENTE", "A rota não existe."),
+    405: ("METODO_NAO_PERMITIDO", "O método não é aceito nesta rota."),
+}
+
+
+@app.exception_handler(StarletteHTTPException)
+async def _tratar_erro_de_rota(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    codigo, mensagem = ERROS_DE_ROTA.get(exc.status_code, ("ERRO_HTTP", str(exc.detail)))
+    resposta = _resposta_erro(exc.status_code, codigo, mensagem)
+    resposta.headers.update(exc.headers or {})  # mantém o Allow do 405
+    return resposta
 
 
 @app.exception_handler(RequestValidationError)
