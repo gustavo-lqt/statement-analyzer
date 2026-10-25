@@ -21,9 +21,9 @@ from app.models import (
 def converter_data(texto: str, formato: str) -> date | None:
     """Aplica RN01: interpreta uma data somente no formato declarado."""
     padroes = {
-        "dd/mm/aaaa": r"^(?P<dia>\d{2})/(?P<mes>\d{2})/(?P<ano>\d{4})$",
-        "aaaa-mm-dd": r"^(?P<ano>\d{4})-(?P<mes>\d{2})-(?P<dia>\d{2})$",
-        "dd-mm-aaaa": r"^(?P<dia>\d{2})-(?P<mes>\d{2})-(?P<ano>\d{4})$",
+        "dd/mm/aaaa": r"^(?P<dia>[0-9]{2})/(?P<mes>[0-9]{2})/(?P<ano>[0-9]{4})$",
+        "aaaa-mm-dd": r"^(?P<ano>[0-9]{4})-(?P<mes>[0-9]{2})-(?P<dia>[0-9]{2})$",
+        "dd-mm-aaaa": r"^(?P<dia>[0-9]{2})-(?P<mes>[0-9]{2})-(?P<ano>[0-9]{4})$",
     }
     texto = texto.strip()
     padrao = padroes.get(formato)
@@ -69,7 +69,13 @@ def converter_valor(
         return MotivoRecusa.VALOR_INVALIDO.value
     inteiro = partes[0]
     decimal = partes[1] if len(partes) == 2 else ""
-    if not inteiro.isdigit() or (len(partes) == 2 and not decimal.isdigit()):
+    if (
+        not (inteiro.isascii() and inteiro.isdigit())
+        or (
+            len(partes) == 2
+            and not (decimal.isascii() and decimal.isdigit())
+        )
+    ):
         return MotivoRecusa.VALOR_INVALIDO.value
     if len(decimal) >= 3:
         return MotivoRecusa.PRECISAO_INVALIDA.value

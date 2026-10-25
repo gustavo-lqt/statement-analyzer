@@ -115,6 +115,17 @@ def test_converter_valor_recusa_espacos_internos_em_parenteses():
     assert converter_valor("( 1,00 )", ",", ".") == "VALOR_INVALIDO"
 
 
+@pytest.mark.parametrize("texto", ["1²", "²", "١٢,٣٠", "12,٣٠"])
+def test_converter_valor_recusa_digitos_unicode(texto: str):
+    """RN02: valores com dígitos não ASCII são recusados."""
+    assert converter_valor(texto, ",", ".") == "VALOR_INVALIDO"
+
+
+def test_converter_data_recusa_digitos_unicode():
+    """RN01: datas com dígitos não ASCII são recusadas."""
+    assert converter_data("٠١/٠٩/٢٠٢٦", "dd/mm/aaaa") is None
+
+
 @pytest.mark.parametrize("texto", ["12,340", "1,999"])
 def test_converter_valor_recusa_precisao_excedente(texto: str):
     """RN04: três casas decimais recusam sem arredondamento."""
@@ -188,6 +199,12 @@ def test_normalizar_respeita_ordem_data_antes_do_valor():
     assert resultado.motivo is MotivoRecusa.DATA_INVALIDA
 
 
+def test_normalizar_recusa_valor_com_digito_unicode():
+    """RN05: valor com dígito não ASCII vira VALOR_INVALIDO sem levantar exceção."""
+    resultado = normalizar(linha_valor("1²"), ficha())
+    assert resultado.motivo is MotivoRecusa.VALOR_INVALIDO
+
+
 @pytest.mark.parametrize("motivo", [MotivoRecusa.ENCODING_INVALIDO, MotivoRecusa.LINHA_TRUNCADA])
 def test_normalizar_preserva_erro_da_leitura(motivo: MotivoRecusa):
     """RN05: erros já detectados pela leitura viram recusas com os mesmos dados."""
@@ -213,6 +230,14 @@ def test_processar_preserva_ordem_e_continua_apos_recusas():
     resultado = processar(linhas, ficha())
     assert [item.valor_centavos for item in resultado.lancamentos] == [100, 200, 300]
     assert [item.linha for item in resultado.recusas] == [3]
+
+
+def test_processar_continua_apos_valor_com_digito_unicode():
+    """RN05: valor com dígito não ASCII é recusado sem abortar o lote."""
+    resultado = processar([linha_valor("1,00"), linha_valor("1²", numero=3)], ficha())
+    assert resultado.aceitos == 1
+    assert resultado.rejeitados == 1
+    assert resultado.recusas[0].motivo is MotivoRecusa.VALOR_INVALIDO
 
 
 def test_processar_todas_ruins_levanta_nenhuma_linha_valida():
