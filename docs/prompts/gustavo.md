@@ -120,3 +120,42 @@ A revisão dos PRs também achou um bug no módulo de outra pessoa:
   `ValueError`, porque `"²".isdigit()` é `True` mas `int()` falha. Pela API, isso virava
   erro 500 no upload inteiro, contra a RN05. Repassei ao Felipe, que corrigiu. Conferido
   depois pela API: o mesmo CSV devolve 201, com a linha recusada como `VALOR_INVALIDO`.
+
+## Fechamento da entrega
+
+Pedido: deixar tudo pronto no PR #19, para não precisar de nenhum commit depois da
+aprovação. Isso incluía preencher as referências de PR da SPEC §8 e resolver a proposta do
+Diego sobre o `\r` solto, que estava em aberto desde o PR #16.
+
+**`\r` solto no CSV.** A IA reproduziu o problema antes de mexer. Um `\r` fora de aspas,
+no meio ou no fim de uma célula, fazia o módulo `csv` levantar `csv.Error`, e isso derrubava
+a leitura do arquivo inteiro (500 pela API, contra a RN05). Entre aspas, o `\r` já era
+aceito. Decidi seguir a sugestão do Diego:
+
+- a linha com `\r` solto sai `LINHA_TRUNCADA`;
+- se o `\r` estiver no cabeçalho, as linhas de dados saem `COLUNA_AUSENTE`, porque o
+  cabeçalho não tem as colunas da ficha;
+- um arquivo que usa só `\r` como quebra é uma linha só e levanta `ArquivoVazio`, porque
+  só `\n` e `\r\n` quebram linha.
+
+A correção ficou em `_celulas` de `app/leitura.py`, que é do Diego. Ela entrou neste PR
+porque decidi fechar a entrega sem um PR a mais, e o Diego revisa a mudança no próprio
+#19. Os testes vieram primeiro e falharam com `csv.Error` antes da correção. Foram 5 em
+`tests/test_leitura.py` e 2 em `tests/test_api.py`, que conferem pela API os dois casos que
+davam 500 (o `\r` solto e o `1²` do PR #18).
+
+**SPEC v1.3.**
+
+- A §4 ganhou a regra do `\r`. A RN01 e a RN02 agora dizem que só os dígitos `0`–`9` são
+  aceitos, o que registra na SPEC a correção do PR #18.
+- A §8 ganhou as duas linhas da v1.3.
+- Os 10 `#«n»` da §8 foram preenchidos. Como a SPEC nunca mudou por PR (o v1.1 veio no
+  commit inicial e o v1.2 no commit da base), a coluna traz o commit e os PRs que
+  implementaram cada decisão.
+
+**Erro da IA:** o script que editou a SPEC leu o arquivo com o modo de texto do Python, que
+converteu os `\r` e `\n` escritos como texto em quebras de linha reais. A IA viu o problema
+na conferência do diff e corrigiu o arquivo lendo e gravando em modo binário.
+
+Resultado: 280 testes passando, sem nenhum pulado, com 99% de cobertura em `app/` e
+`gerador/`.

@@ -5,7 +5,7 @@
 **Envie um extrato bancário. Faça perguntas sobre ele.**
 
 ![Etapa](https://img.shields.io/badge/etapa-02%20%E2%80%94%20implementa%C3%A7%C3%A3o-1F4E79)
-![Testes](https://img.shields.io/badge/testes-273%20passando-2E7D32)
+![Testes](https://img.shields.io/badge/testes-280%20passando-2E7D32)
 ![Cobertura](https://img.shields.io/badge/cobertura-99%25-2E7D32)
 ![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
@@ -257,12 +257,12 @@ docker compose run --rm tests
 |:---|---:|:---|
 | `tests/test_regras.py` | 45 | Normalização e validação, RN01–RN06 |
 | `tests/test_consultas.py` | 55 | As oito consultas, RN07–RN10 |
-| `tests/test_leitura.py` | 58 | Leitura do CSV pela ficha, inclusive 100 mil linhas em streaming (RNF04) |
+| `tests/test_leitura.py` | 63 | Leitura do CSV pela ficha, inclusive 100 mil linhas em streaming (RNF04) |
 | `tests/test_gerador.py` | 46 | Gerador de extratos sintéticos |
 | `tests/test_db.py` | 9 | Persistência, cascata e rollback |
-| `tests/test_api.py` | 47 | Contratos HTTP da SPEC §6 |
+| `tests/test_api.py` | 49 | Contratos HTTP da SPEC §6 |
 | `tests/test_arquitetura.py` | 13 | Guarda de arquitetura (ADR-001) |
-| **Total** | **273** | cobertura de 99% em `app/` e `gerador/` |
+| **Total** | **280** | cobertura de 99% em `app/` e `gerador/` |
 
 A RNF07 pede 80% de cobertura em `app/regras.py` e `app/consultas.py`. Hoje eles estão em
 95% e 100%. Cada teste tem uma docstring que cita a regra ou o contrato que verifica, e
