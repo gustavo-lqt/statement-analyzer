@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Statement Analyzer",
-    version="1.3",
+    version="1.4",
     description="Lê extratos bancários em CSV pela ficha do banco e responde consultas "
     "de análise sobre os lançamentos. Ver docs/SPEC.md.",
 )

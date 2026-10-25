@@ -159,3 +159,7 @@ na conferência do diff e corrigiu o arquivo lendo e gravando em modo binário.
 
 Resultado: 280 testes passando, sem nenhum pulado, com 99% de cobertura em `app/` e
 `gerador/`.
+
+**SPEC v1.4.** Como o sistema ficou completo de uma vez, as tabelas da §3 e da §7 passaram a
+marcar todos os requisitos e unidades na Entrega 3, com o registro na §8. A tag do que foi
+entregue é a `entrega-3`.

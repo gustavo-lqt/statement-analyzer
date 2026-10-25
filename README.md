@@ -4,7 +4,7 @@
 
 **Envie um extrato bancário. Faça perguntas sobre ele.**
 
-![Etapa](https://img.shields.io/badge/etapa-02%20%E2%80%94%20implementa%C3%A7%C3%A3o-1F4E79)
+![Etapa](https://img.shields.io/badge/etapa-03%20%E2%80%94%20entrega%20final-1F4E79)
 ![Testes](https://img.shields.io/badge/testes-280%20passando-2E7D32)
 ![Cobertura](https://img.shields.io/badge/cobertura-99%25-2E7D32)
 ![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)

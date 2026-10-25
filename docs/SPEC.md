@@ -1,4 +1,4 @@
-# Especificação Técnica — Statement Analyzer (v1.3)
+# Especificação Técnica — Statement Analyzer (v1.4)
 
 > **Fonte da verdade do projeto.** Este documento é lido pelo agente de IA que implementa e
 > pelo harness que valida. Código que contraria esta especificação está errado. Especificação
@@ -10,7 +10,7 @@
 | **Disciplina** | Bootcamp III — Turma B — CEUB — 2026/2 |
 | **Repositório** | [statement-analyzer](https://github.com/gustavo-lqt/statement-analyzer) |
 | **Stack** | Python 3.12 · FastAPI · SQLite · pytest · Docker |
-| **Versão** | v1.3 — 25/10/2026 |
+| **Versão** | v1.4 — 25/10/2026 |
 
 ---
 
@@ -71,17 +71,17 @@ conta (exige o conceito de conta, hoje inexistente no modelo).
 
 | ID | Requisito | Entrega |
 |:---:|---|:---:|
-| RF01 | Ler um arquivo CSV aplicando a ficha do banco informada | 2 |
-| RF02 | Normalizar cada linha para o modelo canônico de Lançamento | 2 |
-| RF03 | Recusar linhas inválidas individualmente, registrando motivo e número da linha | 2 |
-| RF04 | Enviar um extrato e persistir lançamentos e recusas | 2 |
-| RF05 | Listar extratos e consultar um extrato com seus lançamentos | 2 |
-| RF06 | Apagar um extrato, em cascata com lançamentos e recusas | 2 |
-| RF07 | Suportar três fichas de banco distintas | 2 |
-| RF08 | Consulta `resumo`: entradas, saídas, saldo, média diária, período, quantidade | 2 |
-| RF09 | Consulta `saldo`: saldo final, se ficou negativo, saldo mínimo e sua data | 2 |
-| RF10 | Consultas `maior-entrada` e `maior-despesa` | 2 |
-| RF11 | Consulta `top-despesas`, com N configurável | 2 |
+| RF01 | Ler um arquivo CSV aplicando a ficha do banco informada | 3 |
+| RF02 | Normalizar cada linha para o modelo canônico de Lançamento | 3 |
+| RF03 | Recusar linhas inválidas individualmente, registrando motivo e número da linha | 3 |
+| RF04 | Enviar um extrato e persistir lançamentos e recusas | 3 |
+| RF05 | Listar extratos e consultar um extrato com seus lançamentos | 3 |
+| RF06 | Apagar um extrato, em cascata com lançamentos e recusas | 3 |
+| RF07 | Suportar três fichas de banco distintas | 3 |
+| RF08 | Consulta `resumo`: entradas, saídas, saldo, média diária, período, quantidade | 3 |
+| RF09 | Consulta `saldo`: saldo final, se ficou negativo, saldo mínimo e sua data | 3 |
+| RF10 | Consultas `maior-entrada` e `maior-despesa` | 3 |
+| RF11 | Consulta `top-despesas`, com N configurável | 3 |
 | RF12 | Consulta `por-semana` | 3 |
 | RF13 | Consulta `dias-no-negativo` | 3 |
 | RF14 | Consulta `repetidos` | 3 |
@@ -126,7 +126,7 @@ consecutivos colapsados e sem pontuação.
 | RNF04 | Ler arquivo de 100.000 linhas em até 60 s, em máquina de 2 vCPU e 4 GB, com leitura em streaming (memória não cresce proporcional ao arquivo) |
 | RNF05 | Nenhum extrato bancário real no repositório: toda fixture é gerada sinteticamente, com semente fixa |
 | RNF06 | Logs não registram descrição de lançamento em texto claro |
-| RNF07 | Cobertura mínima de 80% em `app/regras.py` e `app/consultas.py` (verificado na Entrega 3) |
+| RNF07 | Cobertura mínima de 80% em `app/regras.py` e `app/consultas.py` (verificado na entrega) |
 
 ---
 
@@ -240,13 +240,13 @@ conhece HTTP.
 
 | # | Unidade | Arquivo | Responsabilidade | Entrega |
 |:---:|---|---|---|:---:|
-| U1 | models | `app/models.py` | Entidades: `Extrato`, `Lancamento`, `Recusa`, `FichaBanco` | 2 |
-| U2 | leitura | `app/leitura.py` | Abre o arquivo e aplica a ficha; produz linhas cruas. Sem HTTP | 2 |
-| U3 | regras | `app/regras.py` | Motor puro de normalização e validação (RN01–RN06). Sem HTTP, sem I/O | 2 |
-| U4 | consultas | `app/consultas.py` | As oito consultas (RN07–RN10). Recebe lista de lançamentos, devolve agregados | 2 e 3 |
-| U5 | api | `app/api.py` | Camada FastAPI fina; traduz HTTP ⇄ motor e erros para o formato §6.6 | 2 |
-| U6 | db | `app/db.py` | Tabelas e acesso SQLite | 2 |
-| U7 | harness | `tests/` + `gerador/` | Fixtures sintéticas com semente e suíte de testes | 2 |
+| U1 | models | `app/models.py` | Entidades: `Extrato`, `Lancamento`, `Recusa`, `FichaBanco` | 3 |
+| U2 | leitura | `app/leitura.py` | Abre o arquivo e aplica a ficha; produz linhas cruas. Sem HTTP | 3 |
+| U3 | regras | `app/regras.py` | Motor puro de normalização e validação (RN01–RN06). Sem HTTP, sem I/O | 3 |
+| U4 | consultas | `app/consultas.py` | As oito consultas (RN07–RN10). Recebe lista de lançamentos, devolve agregados | 3 |
+| U5 | api | `app/api.py` | Camada FastAPI fina; traduz HTTP ⇄ motor e erros para o formato §6.6 | 3 |
+| U6 | db | `app/db.py` | Tabelas e acesso SQLite | 3 |
+| U7 | harness | `tests/` + `gerador/` | Fixtures sintéticas com semente e suíte de testes | 3 |
 
 Cada unidade vira uma Issue no GitHub, com o responsável definido lá. A atribuição não é
 duplicada neste documento: a Issue é a fonte da divisão, e a autoria dos commits e dos Pull
@@ -339,6 +339,7 @@ CREATE INDEX idx_lancamento_extrato_data ON lancamento(extrato_id, data);
 | v1.1 → v1.2 | As oito consultas entram já na Entrega 2 (D7) | Detalhar o contrato para permitir trabalho paralelo | `5ec5f1b` · #17, #19 |
 | v1.2 → v1.3 | RN01 e RN02 aceitam só os dígitos `0`–`9`; qualquer outro dígito recusa a linha | Revisão do PR #18 mostrou que `str.isdigit()` aceita `²` e dígitos de outros alfabetos: `"1²"` derrubava o envio com 500 (contra a RN05) e `"١٢,٣٠"` virava 1230 (contra "recusar, não adivinhar") | #18 |
 | v1.2 → v1.3 | Um `\r` solto fora de aspas recusa a linha como `LINHA_TRUNCADA`; no cabeçalho, as linhas de dados saem `COLUNA_AUSENTE` (§4) | Revisão do PR #16 apontou que o módulo `csv` levantava erro nesse caso e derrubava a leitura do arquivo inteiro, contra a RN05 | #19 |
+| v1.3 → v1.4 | Todo o escopo (RF01–RF14 e as unidades U1–U7) é entregue de uma vez, na Entrega 3; as tabelas da §3 e da §7 deixam de dividir os requisitos entre as Entregas 2 e 3 | Com as consultas adiantadas (D7), o sistema ficou completo de uma vez, e a divisão entre entregas deixou de corresponder ao que foi entregue | — |
 
 ---
 
