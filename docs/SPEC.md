@@ -1,4 +1,4 @@
-# Especificação Técnica — Statement Analyzer (v1.2)
+# Especificação Técnica — Statement Analyzer (v1.3)
 
 > **Fonte da verdade do projeto.** Este documento é lido pelo agente de IA que implementa e
 > pelo harness que valida. Código que contraria esta especificação está errado. Especificação
@@ -10,7 +10,7 @@
 | **Disciplina** | Bootcamp III — Turma B — CEUB — 2026/2 |
 | **Repositório** | [statement-analyzer](https://github.com/gustavo-lqt/statement-analyzer) |
 | **Stack** | Python 3.12 · FastAPI · SQLite · pytest · Docker |
-| **Versão** | v1.2 — 22/10/2026 |
+| **Versão** | v1.3 — 25/10/2026 |
 
 ---
 
@@ -94,8 +94,8 @@ Cada regra é verificável e é citada na docstring do teste que a valida.
 
 | ID | Regra |
 |:---:|---|
-| **RN01** | A data é interpretada pelo formato **declarado na ficha do banco**, nunca inferido. Formatos aceitos: `dd/mm/aaaa`, `aaaa-mm-dd`, `dd-mm-aaaa`. Data que não casa com o formato declarado, ou sintaticamente válida mas inexistente (`31/02/2026`), recusa a linha. Armazenada sempre como `AAAA-MM-DD`. |
-| **RN02** | O valor é armazenado como **inteiro em centavos**. Separador decimal e de milhar vêm da ficha; o de milhar é removido antes da conversão. Com vírgula decimal, `1.234,56` → `123456`. Ponto flutuante não é usado em nenhum ponto do fluxo monetário. |
+| **RN01** | A data é interpretada pelo formato **declarado na ficha do banco**, nunca inferido. Formatos aceitos: `dd/mm/aaaa`, `aaaa-mm-dd`, `dd-mm-aaaa`, só com os dígitos `0`–`9`. Data que não casa com o formato declarado, ou sintaticamente válida mas inexistente (`31/02/2026`), recusa a linha. Armazenada sempre como `AAAA-MM-DD`. |
+| **RN02** | O valor é armazenado como **inteiro em centavos**. Separador decimal e de milhar vêm da ficha; o de milhar é removido antes da conversão. Só os dígitos `0`–`9` são aceitos; qualquer outro recusa a linha (`VALOR_INVALIDO`). Com vírgula decimal, `1.234,56` → `123456`. Ponto flutuante não é usado em nenhum ponto do fluxo monetário. |
 | **RN03** | Saída é negativa e entrada é positiva, **sempre**. Fichas `COLUNA_DC` e `COLUNAS_SEPARADAS` são convertidas na leitura; nenhuma unidade posterior conhece a convenção do banco. |
 | **RN04** | Valor com três ou mais casas decimais **recusa a linha** (`PRECISAO_INVALIDA`). Não arredonda: arredondar em silêncio é perda de informação em sistema de conferência. |
 | **RN05** | Linha inválida **não aborta a leitura**. É recusada com número da linha, motivo e conteúdo bruto, e o processamento continua. Um arquivo com recusas é uma leitura bem-sucedida. |
@@ -107,6 +107,9 @@ Cada regra é verificável e é citada na docstring do teste que a valida.
 
 **Motivos de recusa:** `DATA_INVALIDA` · `VALOR_INVALIDO` · `PRECISAO_INVALIDA` ·
 `COLUNA_AUSENTE` · `LINHA_TRUNCADA` · `ENCODING_INVALIDO`
+
+Só `\n` e `\r\n` quebram linha. Um `\r` solto fora de aspas é quebra de linha corrompida:
+a linha sai `LINHA_TRUNCADA`; no cabeçalho, as linhas de dados saem `COLUNA_AUSENTE`.
 
 **Descrição normalizada** (usada em RN09): original em caixa alta, sem acentos, com espaços
 consecutivos colapsados e sem pontuação.
@@ -316,21 +319,26 @@ CREATE INDEX idx_lancamento_extrato_data ON lancamento(extrato_id, data);
 
 > Este registro é o requisito "Refinamento por Feedback". Cada ajuste vindo de teste ou de
 > revisão entra aqui com o motivo e a referência ao PR.
+>
+> Quando a SPEC mudou por commit direto, sem PR, a coluna traz o commit (`1b58f3a` é a
+> estrutura inicial e `5ec5f1b` é a base da Entrega 2), seguido dos PRs que implementaram a
+> decisão.
 
 | Versão | O que mudou | Motivo | PR |
 |:---:|---|---|:---:|
-| v1.0 → v1.1 | A consulta `recorrentes` (cobranças que se repetem **todos os meses**) virou `repetidos` (gastos que se repetem **dentro do período**), e ganhou a RN09 com limiar de 3 ocorrências e tolerância de 10% | Revisão do grupo apontou que um extrato exportado cobre normalmente **um mês**, então a consulta original não teria dados suficientes para existir. Análise entre meses foi movida para "evolução prevista", pois exige o conceito de conta | #«n» |
-| v1.0 → v1.1 | A consulta `por-mes` virou `por-semana` | Mesmo motivo: num extrato de um mês, o agrupamento mensal devolvia uma única linha, sem informação útil | #«n» |
-| v1.0 → v1.1 | RN08 passou a definir explicitamente o tratamento de lançamentos na mesma data | O cálculo de `dias-no-negativo` era ambíguo quando dois lançamentos do mesmo dia cruzavam o zero em ordens diferentes — o extrato não garante ordem interna do dia | #«n» |
+| v1.0 → v1.1 | A consulta `recorrentes` (cobranças que se repetem **todos os meses**) virou `repetidos` (gastos que se repetem **dentro do período**), e ganhou a RN09 com limiar de 3 ocorrências e tolerância de 10% | Revisão do grupo apontou que um extrato exportado cobre normalmente **um mês**, então a consulta original não teria dados suficientes para existir. Análise entre meses foi movida para "evolução prevista", pois exige o conceito de conta | `1b58f3a` |
+| v1.0 → v1.1 | A consulta `por-mes` virou `por-semana` | Mesmo motivo: num extrato de um mês, o agrupamento mensal devolvia uma única linha, sem informação útil | `1b58f3a` |
+| v1.0 → v1.1 | RN08 passou a definir explicitamente o tratamento de lançamentos na mesma data | O cálculo de `dias-no-negativo` era ambíguo quando dois lançamentos do mesmo dia cruzavam o zero em ordens diferentes — o extrato não garante ordem interna do dia | `1b58f3a` |
 | v1.0 → v1.1 | O escopo da Entrega 1 (§2) deixou de incluir a implementação do motor de leitura e normalização e o harness; passou a cobrir repositório governado, documentação e divisão de tarefas. RF01–RF03 e as unidades U1, U2, U3 e U7 foram remanejadas para a Entrega 2 | Orientação do professor na Oficina Prática I (22/08): a Entrega Inicial pode ser entregue incompleta e complementada até 17/10. A equipe priorizou consolidar governança e especificação antes de começar a codificar | — |
-| v1.1 → v1.2 | Os três bancos são as fichas sintéticas `banco-a`, `banco-b` e `banco-c`, que juntas cobrem as três convenções de sinal, os três formatos de data e os dois encodings (D1) | Detalhar o contrato para permitir trabalho paralelo | #«n» |
-| v1.1 → v1.2 | A semana de `por-semana` vai de segunda a domingo; semanas parciais nas pontas entram, recortadas ao período do extrato (D2) | Detalhar o contrato para permitir trabalho paralelo | #«n» |
-| v1.1 → v1.2 | O saldo inicial continua opcional; quando não informado é gravado como `NULL` (a coluna `saldo_inicial_centavos` perde o `NOT NULL DEFAULT 0`). As consultas usam 0 nesse caso, e `dias-no-negativo` devolve `saldo_inicial_assumido: true` (D3) | Detalhar o contrato para permitir trabalho paralelo | #«n» |
-| v1.1 → v1.2 | A tolerância de 10% da RN09 é mantida, com o algoritmo exato de `repetidos` definido no contrato da Entrega 2 (D4) | Detalhar o contrato para permitir trabalho paralelo | #«n» |
-| v1.1 → v1.2 | `maior-entrada` e `maior-despesa` sem nenhum lançamento do tipo pedido devolvem `200` com corpo `null` (D5) | Detalhar o contrato para permitir trabalho paralelo | #«n» |
-| v1.1 → v1.2 | `GET /extratos/{id}` pagina com `limite` (padrão 100, de 1 a 1000) e `offset` (padrão 0) (D6) | Detalhar o contrato para permitir trabalho paralelo | #«n» |
-| v1.1 → v1.2 | As oito consultas entram já na Entrega 2 (D7) | Detalhar o contrato para permitir trabalho paralelo | #«n» |
-| | | | |
+| v1.1 → v1.2 | Os três bancos são as fichas sintéticas `banco-a`, `banco-b` e `banco-c`, que juntas cobrem as três convenções de sinal, os três formatos de data e os dois encodings (D1) | Detalhar o contrato para permitir trabalho paralelo | `5ec5f1b` · #16 |
+| v1.1 → v1.2 | A semana de `por-semana` vai de segunda a domingo; semanas parciais nas pontas entram, recortadas ao período do extrato (D2) | Detalhar o contrato para permitir trabalho paralelo | `5ec5f1b` · #17 |
+| v1.1 → v1.2 | O saldo inicial continua opcional; quando não informado é gravado como `NULL` (a coluna `saldo_inicial_centavos` perde o `NOT NULL DEFAULT 0`). As consultas usam 0 nesse caso, e `dias-no-negativo` devolve `saldo_inicial_assumido: true` (D3) | Detalhar o contrato para permitir trabalho paralelo | `5ec5f1b` · #15, #17, #19 |
+| v1.1 → v1.2 | A tolerância de 10% da RN09 é mantida, com o algoritmo exato de `repetidos` definido no contrato da Entrega 2 (D4) | Detalhar o contrato para permitir trabalho paralelo | `5ec5f1b` · #17 |
+| v1.1 → v1.2 | `maior-entrada` e `maior-despesa` sem nenhum lançamento do tipo pedido devolvem `200` com corpo `null` (D5) | Detalhar o contrato para permitir trabalho paralelo | `5ec5f1b` · #17, #19 |
+| v1.1 → v1.2 | `GET /extratos/{id}` pagina com `limite` (padrão 100, de 1 a 1000) e `offset` (padrão 0) (D6) | Detalhar o contrato para permitir trabalho paralelo | `5ec5f1b` · #15, #19 |
+| v1.1 → v1.2 | As oito consultas entram já na Entrega 2 (D7) | Detalhar o contrato para permitir trabalho paralelo | `5ec5f1b` · #17, #19 |
+| v1.2 → v1.3 | RN01 e RN02 aceitam só os dígitos `0`–`9`; qualquer outro dígito recusa a linha | Revisão do PR #18 mostrou que `str.isdigit()` aceita `²` e dígitos de outros alfabetos: `"1²"` derrubava o envio com 500 (contra a RN05) e `"١٢,٣٠"` virava 1230 (contra "recusar, não adivinhar") | #18 |
+| v1.2 → v1.3 | Um `\r` solto fora de aspas recusa a linha como `LINHA_TRUNCADA`; no cabeçalho, as linhas de dados saem `COLUNA_AUSENTE` (§4) | Revisão do PR #16 apontou que o módulo `csv` levantava erro nesse caso e derrubava a leitura do arquivo inteiro, contra a RN05 | #19 |
 
 ---
 
