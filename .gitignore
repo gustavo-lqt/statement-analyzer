@@ -21,3 +21,8 @@ htmlcov/
 .vscode/
 .idea/
 .DS_Store
+
+# Arquivos gerados pelo plugin Superpowers (planos e worktrees locais)
+docs/plans/
+docs/superpowers/
+.worktrees/
