@@ -74,11 +74,11 @@ Resultado, em 5 commits:
 
 | Commit | O quê |
 |---|---|
-| `55e9434` Test | Detector de imports da guarda (simples, `from app import db`, relativos) |
-| `de4e5e2` Test | Detector de SQL em strings, incluindo f-strings; ignora docstrings |
-| `abcdaa0` Implement | Guardas aplicadas ao código de `app/` |
-| `3598329` Test | `tests/test_api.py`, escrito antes da API |
-| `ef82631` Implement | `app/api.py` |
+| `45e5002` Test | Detector de imports da guarda (simples, `from app import db`, relativos) |
+| `b8b83d4` Test | Detector de SQL em strings, incluindo f-strings; ignora docstrings |
+| `26f26aa` Implement | Guardas aplicadas ao código de `app/` |
+| `e09b481` Test | `tests/test_api.py`, escrito antes da API |
+| `17602fb` Implement | `app/api.py` |
 
 Na guarda de arquitetura, os detectores passaram pelo ciclo vermelho → verde contra
 código inventado. Para conferir que as guardas reprovam código real, a IA criou por um
