@@ -1,8 +1,11 @@
-# Especificação Técnica — Statement Analyzer (v1.4)
+# Especificação Técnica — Statement Analyzer (v1.5, as-built)
 
 > **Fonte da verdade do projeto.** Este documento é lido pelo agente de IA que implementa e
 > pelo harness que valida. Código que contraria esta especificação está errado. Especificação
 > que os testes revelarem ambígua é corrigida aqui e registrada na seção 8.
+>
+> **As-built:** a partir da v1.5, este documento descreve o sistema exatamente como foi
+> entregue na release `v1.0.0`: arquitetura, rotas, contratos e interfaces públicas.
 
 | | |
 |---|---|
@@ -10,7 +13,7 @@
 | **Disciplina** | Bootcamp III — Turma B — CEUB — 2026/2 |
 | **Repositório** | [statement-analyzer](https://github.com/gustavo-lqt/statement-analyzer) |
 | **Stack** | Python 3.12 · FastAPI · SQLite · pytest · Docker |
-| **Versão** | v1.4 — 25/10/2026 |
+| **Versão** | v1.5 (as-built) — 25/10/2026 · descreve a release `v1.0.0` |
 
 ---
 
@@ -35,28 +38,37 @@ arquivo, saem respostas sobre ele.
 
 ---
 
-## 2. Escopo da Entrega 1
+## 2. Escopo entregue (v1.0.0)
 
-Fundação do projeto: repositório governado, especificação técnica e trabalho dividido. Nada
-de implementação.
+Sistema completo, entregue de uma vez na Entrega 3 (§3 e §7).
 
-**Entregue nesta etapa:**
+**Produto:**
+
+- Leitura de extratos CSV pela ficha do banco, com três fichas (`banco-a`, `banco-b`,
+  `banco-c`) que cobrem as três convenções de sinal, os três formatos de data e os dois
+  encodings (RF01, RF07)
+- Normalização para o modelo canônico e recusa individual de linhas inválidas (RN01–RN06)
+- Persistência em SQLite de extratos, lançamentos e recusas, com exclusão em cascata
+- As oito consultas de análise (RN07–RN10)
+- API HTTP em FastAPI, com documentação interativa em `/docs` e formato único de erro
+- Gerador de extratos sintéticos com semente fixa e harness de testes
+- Ambiente Docker com dois serviços: `api` e `tests`
+
+**Governança:**
 
 - Repositório público, com todos os integrantes como colaboradores
-- Fluxo de branches `main` / `develop` / `feature/*`, com a `main` protegida por regra ativa
-  (Pull Request obrigatório, uma aprovação, sem lista de bypass)
-- README com visão geral, guia de execução e as decisões de arquitetura (ADRs)
-- Esta especificação técnica
-- Arquivo de contexto do agente de IA (`CLAUDE.md`)
-- Issues abertas a partir da decomposição da §7, com responsável atribuído, organizadas no
-  quadro do GitHub Projects
+- Fluxo de branches `main` / `entrega` / `feature/<issue>-<nome>`: cada integrante trabalha
+  numa feature branch, que entra na `entrega` por Pull Request; a `entrega` entra na `main`
+  por Pull Request
+- `main` e `entrega` protegidas, inclusive para administradores: Pull Request obrigatório,
+  uma aprovação, o último push aprovado por outra pessoa, conversas resolvidas, sem force
+  push e sem exclusão
+- Uma Issue por unidade (§7), com responsável, fechada pelo Pull Request que a entrega
 
-**Fora de escopo nesta entrega:** implementação de qualquer unidade, ambiente containerizado,
-harness de testes, API HTTP, persistência e consultas.
-
-> Conforme orientação do professor na Oficina Prática I (22/08), a Entrega Inicial pode ser
-> entregue incompleta e complementada até a Entrega Intermediária (17/10). A equipe optou por
-> consolidar a fundação nesta etapa e iniciar a implementação na janela seguinte.
+**Documentação:** README (instalação, execução, arquitetura e ADRs), esta especificação,
+`CLAUDE.md` (contexto do agente de IA), `docs/prompts/` (registro de uso de IA de cada
+integrante), `docs/tarefas/` (planejamento da divisão do trabalho), `docs/RELATORIO.md`
+(relatório técnico-ético) e `logs_testes.txt` (execução da suíte no Docker).
 
 **Fora de escopo em toda a v1.0.0:** categorização de gastos, metas e orçamento, comparação
 com despesas planejadas, Open Finance, múltiplas moedas, autenticação e multiusuário,
@@ -161,7 +173,7 @@ consecutivos colapsados e sem pontuação.
 ### 6.3 `POST /extratos`
 
 Entrada `multipart/form-data`: `arquivo` (obrigatório), `banco` (obrigatório),
-`saldo_inicial_centavos` (opcional, RN07).
+`saldo_inicial_centavos` (opcional, inteiro, RN07).
 
 Saída `201`:
 ```json
@@ -180,6 +192,10 @@ GET    /extratos                → 200 (lista, sem lançamentos)
 GET    /extratos/{id}           → 200 (com lançamentos paginados) | 404
 DELETE /extratos/{id}           → 204 (cascata) | 404
 ```
+
+`GET /extratos/{id}` aceita `limite` (padrão 100, de 1 a 1000) e `offset` (padrão 0, a partir
+de 0). Fora da faixa → `422 PARAMETRO_INVALIDO`. A resposta traz os campos do extrato (como
+na §6.3, sem `recusas`), mais `lancamentos` (no modelo da §6.2), `limite` e `offset`.
 
 ### 6.5 Consultas — `GET /extratos/{id}/<consulta>`
 
@@ -217,6 +233,10 @@ DELETE /extratos/{id}           → 204 (cascata) | 404
 
 Erros de consulta: `404 EXTRATO_NAO_ENCONTRADO` | `422 PARAMETRO_INVALIDO`
 
+`top-despesas` aceita `n` de 1 a 100 (padrão 10). `maior-entrada` e `maior-despesa` devolvem
+`200` com corpo `null` quando não há lançamento do tipo pedido (D5). Sem saldo inicial
+informado, `saldo` usa 0 e `dias-no-negativo` marca `saldo_inicial_assumido: true` (D3).
+
 ### 6.6 Formato único de erro (RNF01)
 
 ```json
@@ -225,6 +245,30 @@ Erros de consulta: `404 EXTRATO_NAO_ENCONTRADO` | `422 PARAMETRO_INVALIDO`
 
 O campo `regra` traz o identificador da RN violada quando o erro nasce de uma regra de
 negócio (ex.: `"RN06"`); é `null` quando o erro é de protocolo.
+
+Todos os erros da API, sem exceção:
+
+| Status | `erro` | Quando |
+|:---:|---|---|
+| 400 | `ARQUIVO_AUSENTE` | `POST /extratos` sem o campo `arquivo` |
+| 400 | `BANCO_DESCONHECIDO` | ficha não registrada em `app/fichas/` |
+| 404 | `EXTRATO_NAO_ENCONTRADO` | id de extrato inexistente |
+| 404 | `ROTA_INEXISTENTE` | rota que não existe |
+| 405 | `METODO_NAO_PERMITIDO` | método que a rota não aceita (com o cabeçalho `Allow`) |
+| 422 | `ARQUIVO_VAZIO` | arquivo sem nenhuma linha de dados |
+| 422 | `ENCODING_INVALIDO` | cabeçalho fora do encoding da ficha |
+| 422 | `NENHUMA_LINHA_VALIDA` | todas as linhas recusadas (`regra: "RN06"`) |
+| 422 | `PARAMETRO_INVALIDO` | parâmetro fora do tipo ou da faixa; o valor enviado não é ecoado |
+| 500 | `ERRO_INTERNO` | erro inesperado; a resposta e o log não trazem a mensagem original (RNF06) |
+
+### 6.7 Configuração
+
+| Variável | Padrão | Uso |
+|---|---|---|
+| `STATEMENT_DB` | `dados/statement.db` | Caminho do arquivo SQLite. No Docker, `/code/dados/statement.db`, numa pasta montada como volume |
+
+A API escuta na porta `8000`. A conexão é aberta uma vez, pela dependência
+`obter_conexao()` de `app/api.py`; os testes a substituem por um banco em memória.
 
 ---
 
@@ -235,8 +279,15 @@ conhece HTTP.
 
 ```
 [ U5 api (FastAPI) ] → traduz HTTP → [ U2/U3/U4 motor puro ] → usa → [ U1 models ]
-        ↑ testes de integração (test_api.py)      ↑ testes de unidade (test_regras.py, test_consultas.py)
+        │                                                              ↑
+        └──────────────→ [ U6 db (SQLite) ] ───────────────────────────┘
+        ↑ testes de integração (test_api.py)      ↑ testes de unidade (test_leitura.py,
+                                                     test_regras.py, test_consultas.py, test_db.py)
 ```
+
+`tests/test_arquitetura.py` verifica essas dependências no código-fonte: o motor não importa
+FastAPI, Starlette, `sqlite3`, `app.db` nem `app.api`, e nenhum arquivo de `app/` além de
+`app/db.py` contém SQL.
 
 | # | Unidade | Arquivo | Responsabilidade | Entrega |
 |:---:|---|---|---|:---:|
@@ -252,29 +303,55 @@ Cada unidade vira uma Issue no GitHub, com o responsável definido lá. A atribu
 duplicada neste documento: a Issue é a fonte da divisão, e a autoria dos commits e dos Pull
 Requests é a comprovação.
 
-### Interface pública do motor
+### Interfaces públicas
 
 ```python
-# app/leitura.py
+# app/leitura.py — U2
+carregar_ficha(nome: str) -> FichaBanco          # levanta: BancoDesconhecido
+listar_fichas() -> list[str]                     # em ordem alfabética
 ler(conteudo: bytes, ficha: FichaBanco) -> Iterator[LinhaCrua]
-#   levanta: ArquivoVazio | EncodingInvalido
+#   gerador, em streaming; levanta: ArquivoVazio | EncodingInvalido
 
-# app/regras.py — motor puro de normalização
+# app/regras.py — U3, motor puro de normalização
+converter_data(texto: str, formato: str) -> date | None                        # RN01
+converter_valor(texto: str, separador_decimal: str, separador_milhar: str) -> int | str
+#   centavos, ou o motivo de recusa (VALOR_INVALIDO | PRECISAO_INVALIDA)        # RN02, RN04
 normalizar(linha: LinhaCrua, ficha: FichaBanco) -> Lancamento | Recusa
 #   aplica RN01..RN04; devolve Recusa em vez de levantar (RN05)
 processar(linhas: Iterable[LinhaCrua], ficha: FichaBanco) -> ResultadoLeitura
 #   levanta: NenhumaLinhaValida (RN06)
 
-# app/consultas.py — motor puro de análise
+# app/consultas.py — U4, motor puro de análise
+normalizar_descricao(texto: str) -> str                                         # RN09
 resumo(lancamentos) -> Resumo
-saldo(lancamentos, saldo_inicial: int) -> Saldo
+saldo(lancamentos, saldo_inicial: int) -> Saldo                                 # RN08
 maior_entrada(lancamentos) -> Lancamento | None      # desempate por RN10
 maior_despesa(lancamentos) -> Lancamento | None      # desempate por RN10
-top_despesas(lancamentos, n: int) -> list[Lancamento]
-por_semana(lancamentos) -> list[Semana]
+top_despesas(lancamentos, n: int) -> list[Lancamento]   # levanta: ParametroInvalido
+por_semana(lancamentos) -> list[Semana]                                         # D2
 dias_no_negativo(lancamentos, saldo_inicial: int | None) -> DiasNoNegativo   # RN07, RN08 (None = assumido, D3)
-repetidos(lancamentos) -> list[GrupoRepetido]                          # RN09
+repetidos(lancamentos) -> list[GrupoRepetido]                                   # RN09
+
+# app/db.py — U6, único módulo com SQL
+conectar(caminho: str = ":memory:") -> sqlite3.Connection
+salvar_extrato(conn, nome_arquivo, banco, criado_em, saldo_inicial_centavos, resultado) -> Extrato
+#   uma transação: extrato, lançamentos e recusas entram juntos ou nada entra
+listar_extratos(conn) -> list[Extrato]
+obter_extrato(conn, extrato_id: int) -> Extrato | None
+listar_lancamentos(conn, extrato_id: int, limite: int | None = None, offset: int = 0) -> list[Lancamento]
+listar_recusas(conn, extrato_id: int) -> list[Recusa]
+apagar_extrato(conn, extrato_id: int) -> bool                                   # cascata
+
+# gerador/gerar.py — U7
+gerar_csv(ficha: FichaBanco, linhas: int, semente: int, invalidas: int = 0) -> bytes
+#   CLI: python -m gerador.gerar --banco --linhas --semente [--invalidas] --saida
 ```
+
+Entidades (`app/models.py`): `FichaBanco`, `LinhaCrua`, `Lancamento`, `Recusa`,
+`ResultadoLeitura`, `Extrato`, `Resumo`, `Periodo`, `Saldo`, `Semana`, `DiasNoNegativo`,
+`PeriodoNegativo` e `GrupoRepetido`, mais os enums `MotivoRecusa` e `ConvencaoSinal`.
+Exceções (`app/erros.py`): `ErroDominio` e as subclasses `ArquivoVazio`, `EncodingInvalido`,
+`NenhumaLinhaValida`, `BancoDesconhecido`, `ExtratoNaoEncontrado` e `ParametroInvalido`.
 
 ### Modelo de dados
 
@@ -301,17 +378,19 @@ CREATE INDEX idx_lancamento_extrato_data ON lancamento(extrato_id, data);
 
 | Regra | Cenário principal | Casos de borda | Arquivo |
 |:---:|---|---|---|
-| RN01 | Data no formato da ficha converte | `31/02/2026`; data vazia; formato diferente do declarado | `tests/test_regras.py` |
-| RN02 | `1.234,56` → `123456` | valor vazio; só separador; negativo entre parênteses | `tests/test_regras.py` |
+| RN01 | Data no formato da ficha converte | `31/02/2026`; data vazia; formato diferente do declarado; dígitos não ASCII | `tests/test_regras.py` |
+| RN02 | `1.234,56` → `123456` | valor vazio; só separador; negativo entre parênteses; `1²` e dígitos não ASCII | `tests/test_regras.py` |
 | RN03 | Saída chega negativa | ficha `COLUNA_DC`; ficha `COLUNAS_SEPARADAS` | `tests/test_regras.py` |
 | RN04 | Duas casas passam | três casas recusa `PRECISAO_INVALIDA`; duas casas com zero à direita passa | `tests/test_regras.py` |
-| RN05 | Arquivo com 3 linhas ruins lê as demais | linha truncada no fim do arquivo; encoding errado no meio | `tests/test_regras.py` |
+| RN05 | Arquivo com 3 linhas ruins lê as demais | linha truncada no fim do arquivo; encoding errado no meio; `\r` solto fora de aspas | `tests/test_regras.py`, `tests/test_leitura.py` |
 | RN06 | Arquivo válido produz resultado | arquivo só com linhas ruins levanta `NenhumaLinhaValida`; arquivo vazio | `tests/test_regras.py` |
 | RN07 | Saldo inicial informado é usado | ausente marca `saldo_inicial_assumido` | `tests/test_consultas.py` |
 | RN08 | Saldo corrente por data crescente | dois lançamentos no mesmo dia cruzando o zero; conta que nunca fica negativa | `tests/test_consultas.py` |
 | RN09 | Três cobranças iguais formam grupo | duas ocorrências não formam; valor 11% acima fica fora; exatamente 10% entra | `tests/test_consultas.py` |
 | RN10 | Maior despesa única | empate resolve pela data mais antiga | `tests/test_consultas.py` |
 | §6.3 | `POST /extratos` devolve 201 com o contrato | `422 NENHUMA_LINHA_VALIDA` no formato único | `tests/test_api.py` |
+| §6.6 | Todo erro sai no formato único | 404 de rota inexistente; 405; 500 sem detalhes | `tests/test_api.py` |
+| ADR-001 | O motor não importa HTTP nem banco | SQL fora de `app/db.py` | `tests/test_arquitetura.py` |
 
 ---
 
@@ -340,6 +419,8 @@ CREATE INDEX idx_lancamento_extrato_data ON lancamento(extrato_id, data);
 | v1.2 → v1.3 | RN01 e RN02 aceitam só os dígitos `0`–`9`; qualquer outro dígito recusa a linha | Revisão do PR #18 mostrou que `str.isdigit()` aceita `²` e dígitos de outros alfabetos: `"1²"` derrubava o envio com 500 (contra a RN05) e `"١٢,٣٠"` virava 1230 (contra "recusar, não adivinhar") | #18 |
 | v1.2 → v1.3 | Um `\r` solto fora de aspas recusa a linha como `LINHA_TRUNCADA`; no cabeçalho, as linhas de dados saem `COLUNA_AUSENTE` (§4) | Revisão do PR #16 apontou que o módulo `csv` levantava erro nesse caso e derrubava a leitura do arquivo inteiro, contra a RN05 | #19 |
 | v1.3 → v1.4 | Todo o escopo (RF01–RF14 e as unidades U1–U7) é entregue de uma vez, na Entrega 3; as tabelas da §3 e da §7 deixam de dividir os requisitos entre as Entregas 2 e 3 | Com as consultas adiantadas (D7), o sistema ficou completo de uma vez, e a divisão entre entregas deixou de corresponder ao que foi entregue | — |
+| v1.4 → v1.5 | Rota inexistente (`404 ROTA_INEXISTENTE`) e método não aceito (`405 METODO_NAO_PERMITIDO`) passam a sair no formato único de erro (§6.6) | Saíam no formato padrão do FastAPI (`{"detail": ...}`), o que contrariava a RNF01 | — |
+| v1.4 → v1.5 | A SPEC passa a ser *as-built*: §2 com o escopo entregue e o fluxo de branches real (`main`/`entrega`/`feature/*`), §6 com a tabela completa de erros, a paginação e a configuração (§6.7), §7 com as interfaces públicas de todos os módulos | Fechamento da release `v1.0.0`: a especificação precisa descrever exatamente o que foi entregue | — |
 
 ---
 
@@ -354,3 +435,5 @@ CREATE INDEX idx_lancamento_extrato_data ON lancamento(extrato_id, data);
   semanas parciais entram, recortadas ao período.
 - ~~Quais três bancos, definidos a partir dos extratos que os integrantes conseguirem exportar.~~
   **Resolvida em v1.2 (D1):** fichas sintéticas `banco-a`, `banco-b` e `banco-c`.
+
+Nenhuma decisão fica em aberto na release `v1.0.0`.

@@ -133,6 +133,9 @@ contrato não define motivo de recusa para esse caso e o prompt proíbe inventar
 então não foi tratado. Proposta: recusar a linha como `LINHA_TRUNCADA` ("a linha nem pôde ser
 recortada").
 
+**Resolvido no PR #19 (SPEC v1.3):** a proposta foi aceita como estava. A linha com `\r`
+solto sai `LINHA_TRUNCADA`, e um `\r` no cabeçalho faz as linhas saírem `COLUNA_AUSENTE`.
+
 ## O que eu corrigi à mão
 
 Nenhuma linha de código foi editada à mão até a abertura do PR. Minhas intervenções foram de

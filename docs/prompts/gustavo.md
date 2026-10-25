@@ -163,3 +163,29 @@ Resultado: 280 testes passando, sem nenhum pulado, com 99% de cobertura em `app/
 **SPEC v1.4.** Como o sistema ficou completo de uma vez, as tabelas da §3 e da §7 passaram a
 marcar todos os requisitos e unidades na Entrega 3, com o registro na §8. A tag do que foi
 entregue é a `entrega-3`.
+
+## Release v1.0.0
+
+Pedido: conferir os enunciados das Entregas 2 e 3 contra o repositório e fazer tudo o que
+faltasse, sem commitar no fim.
+
+O que a IA fez:
+
+- **SPEC v1.5 as-built.** A §2 agora traz o escopo entregue e o fluxo de branches real. A
+  §6 ganhou a tabela completa de erros, a paginação e a configuração (§6.7). A §7 lista as
+  interfaces públicas de todos os módulos, extraídas do próprio código.
+- **404 e 405 no formato único.** Ao comparar a SPEC com a API, a IA viu que rota
+  inexistente e método não aceito saíam como `{"detail": ...}`, contra a RNF01. Escreveu
+  os dois testes, viu que falhavam e só então criou o handler em `app/api.py`.
+- **Cobertura no harness.** O `docker compose run --rm tests` passou a medir `app/` e
+  `gerador/` inteiros, e o `logs_testes.txt` foi gerado de novo: 282 testes passando, com
+  99% de cobertura.
+- **Documentos novos:** o `docs/RELATORIO.md` e o `CHANGELOG.md`. O README ganhou uma
+  seção de configuração e os links da release.
+
+Na primeira versão, o relatório deixou em aberto as partes que dependiam do grupo: a
+comparação de ferramentas, a licença e a retrospectiva de cada um. Depois que o grupo
+informou as ferramentas do Felipe (GitHub Copilot) e do João Caio (Antigravity), pedi que a
+IA preenchesse o resto. Ela escreveu cada item a partir dos registros em `docs/prompts/`, dos
+PRs e do histórico do git, sem atribuir a ninguém uma opinião ou um número que não estivesse
+registrado. A licença ficou sem arquivo, como a IA recomendou.

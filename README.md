@@ -4,8 +4,9 @@
 
 **Envie um extrato bancário. Faça perguntas sobre ele.**
 
+[![Release](https://img.shields.io/badge/release-v1.0.0-1F4E79)](https://github.com/gustavo-lqt/statement-analyzer/releases/tag/v1.0.0)
 ![Etapa](https://img.shields.io/badge/etapa-03%20%E2%80%94%20entrega%20final-1F4E79)
-![Testes](https://img.shields.io/badge/testes-280%20passando-2E7D32)
+![Testes](https://img.shields.io/badge/testes-282%20passando-2E7D32)
 ![Cobertura](https://img.shields.io/badge/cobertura-99%25-2E7D32)
 ![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
@@ -14,7 +15,9 @@
 
 </div>
 
-Especificação técnica completa: **[`docs/SPEC.md`](docs/SPEC.md)**
+Especificação técnica (as-built): **[`docs/SPEC.md`](docs/SPEC.md)** ·
+Relatório técnico-ético: **[`docs/RELATORIO.md`](docs/RELATORIO.md)** ·
+Versão estável: **[`v1.0.0`](https://github.com/gustavo-lqt/statement-analyzer/releases/tag/v1.0.0)**
 
 ---
 
@@ -106,7 +109,8 @@ Todo erro da API sai no mesmo formato (SPEC §6.6):
 | Status | Erro |
 |:---:|:---|
 | `400` | `ARQUIVO_AUSENTE` · `BANCO_DESCONHECIDO` |
-| `404` | `EXTRATO_NAO_ENCONTRADO` |
+| `404` | `EXTRATO_NAO_ENCONTRADO` · `ROTA_INEXISTENTE` |
+| `405` | `METODO_NAO_PERMITIDO` |
 | `422` | `ARQUIVO_VAZIO` · `ENCODING_INVALIDO` · `NENHUMA_LINHA_VALIDA` · `PARAMETRO_INVALIDO` |
 | `500` | `ERRO_INTERNO` (sem detalhes da exceção na resposta nem no log) |
 
@@ -132,6 +136,24 @@ docker compose run --rm tests    # suíte de testes completa
 
 O banco SQLite fica em `dados/statement.db`, numa pasta montada como volume. Os extratos
 enviados continuam lá depois que o container para.
+
+### Configuração
+
+Não é preciso configurar nada para rodar com Docker: o `docker-compose.yml` já define tudo.
+
+| Variável | Padrão | Para que serve |
+|:---|:---|:---|
+| `STATEMENT_DB` | `dados/statement.db` | Caminho do arquivo SQLite. No Docker, `/code/dados/statement.db` |
+
+A API usa a porta `8000`. Se ela estiver ocupada, troque o lado esquerdo de
+`"8000:8000"` no `docker-compose.yml` (por exemplo, `"8080:8000"`). Para começar com o banco
+vazio, apague `dados/statement.db`.
+
+Fora do Docker, defina a variável antes de subir a API:
+
+```bash
+export STATEMENT_DB=/tmp/statement.db      # no Windows (PowerShell): $env:STATEMENT_DB="C:\temp\statement.db"
+```
 
 ### Testar com um extrato gerado
 
@@ -203,9 +225,8 @@ uvicorn app.api:app --reload     # API em http://localhost:8000
 python -m pytest -q              # testes
 ```
 
-Fora do Docker, o banco fica no caminho da variável `STATEMENT_DB`. Sem ela, o caminho é
-`dados/statement.db`. Antes de abrir um PR, a suíte tem que passar também no Docker
-(ADR-006).
+O banco fica no caminho da variável `STATEMENT_DB` (ver [Configuração](#configuração)).
+Antes de abrir um PR, a suíte tem que passar também no Docker (ADR-006).
 
 ---
 
@@ -260,13 +281,21 @@ docker compose run --rm tests
 | `tests/test_leitura.py` | 63 | Leitura do CSV pela ficha, inclusive 100 mil linhas em streaming (RNF04) |
 | `tests/test_gerador.py` | 46 | Gerador de extratos sintéticos |
 | `tests/test_db.py` | 9 | Persistência, cascata e rollback |
-| `tests/test_api.py` | 49 | Contratos HTTP da SPEC §6 |
+| `tests/test_api.py` | 51 | Contratos HTTP da SPEC §6, inclusive todos os erros da §6.6 |
 | `tests/test_arquitetura.py` | 13 | Guarda de arquitetura (ADR-001) |
-| **Total** | **280** | cobertura de 99% em `app/` e `gerador/` |
+| **Total** | **282** | cobertura de 99% em `app/` e `gerador/` |
 
-A RNF07 pede 80% de cobertura em `app/regras.py` e `app/consultas.py`. Hoje eles estão em
-95% e 100%. Cada teste tem uma docstring que cita a regra ou o contrato que verifica, e
-cada regra tem pelo menos um teste do cenário principal e um de caso de borda.
+O mesmo comando mostra a cobertura de cada módulo:
+
+| Módulo | Cobertura | Módulo | Cobertura |
+|:---|---:|:---|---:|
+| `app/regras.py` | 95% | `app/api.py` | 99% |
+| `app/consultas.py` | 100% | `app/db.py` | 94% |
+| `app/leitura.py` | 99% | `gerador/gerar.py` | 100% |
+
+A RNF07 pede 80% em `app/regras.py` e `app/consultas.py`. Cada teste tem uma docstring que
+cita a regra ou o contrato que verifica, e cada regra tem pelo menos um teste do cenário
+principal e um de caso de borda (rastreabilidade na SPEC §7).
 
 ---
 
@@ -382,13 +411,18 @@ manter as duas definições de dependência em sincronia.
 
 ---
 
-## Evidências de execução
+## Evidências e entrega
 
-Log da última execução da suíte: [`logs_testes.txt`](logs_testes.txt), gerado com
-
-```bash
-docker compose run --rm tests | tee logs_testes.txt
-```
+- **Testes:** log da última execução da suíte, com a cobertura por módulo, em
+  [`logs_testes.txt`](logs_testes.txt), gerado com
+  ```bash
+  docker compose run --rm tests | tee logs_testes.txt
+  ```
+- **Release:** [`v1.0.0`](https://github.com/gustavo-lqt/statement-analyzer/releases/tag/v1.0.0),
+  com as mudanças em [`CHANGELOG.md`](CHANGELOG.md).
+- **Relatório técnico-ético e de encerramento:** [`docs/RELATORIO.md`](docs/RELATORIO.md),
+  com a governança, os erros corrigidos, o loop de re-especificação, a análise das
+  ferramentas de IA e a retrospectiva.
 
 ---
 
