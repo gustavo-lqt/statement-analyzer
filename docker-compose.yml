@@ -11,4 +11,4 @@ services:
 
   tests:
     build: .
-    command: pytest -q --cov=app.regras --cov=app.consultas --cov-report=term-missing
+    command: pytest -q --cov=app --cov=gerador --cov-report=term-missing
