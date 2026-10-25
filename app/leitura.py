@@ -84,7 +84,8 @@ def _decodificar_cabecalho(bruta: bytes, ficha: FichaBanco) -> list[str]:
         texto = bruta.decode(ficha.encoding)
     except UnicodeDecodeError:
         raise EncodingInvalido(f"O cabeçalho do arquivo não está em {ficha.encoding}.") from None
-    return _celulas(texto, ficha.delimitador)
+    # Cabeçalho que o csv não separa não tem as colunas da ficha: as linhas saem COLUNA_AUSENTE.
+    return _celulas(texto, ficha.delimitador) or []
 
 
 def _indices_das_colunas(cabecalho: list[str], ficha: FichaBanco) -> dict[str, int] | None:
@@ -110,14 +111,22 @@ def _recortar(
     if indices is None:
         return LinhaCrua(numero, {}, texto, MotivoRecusa.COLUNA_AUSENTE)
     celulas = _celulas(texto, ficha.delimitador)
-    if len(celulas) != total_celulas:
+    if celulas is None or len(celulas) != total_celulas:
         return LinhaCrua(numero, {}, texto, MotivoRecusa.LINHA_TRUNCADA)
     return LinhaCrua(numero, {chave: celulas[i] for chave, i in indices.items()}, texto)
 
 
-def _celulas(texto: str, delimitador: str) -> list[str]:
-    """Separa as células com o módulo csv, respeitando aspas duplas."""
-    return next(csv.reader([texto], delimiter=delimitador))
+def _celulas(texto: str, delimitador: str) -> list[str] | None:
+    """Separa as células com o módulo csv, respeitando aspas duplas.
+
+    Devolve None quando o csv não consegue separar a linha, como num \\r solto fora de aspas:
+    é uma quebra de linha corrompida, e a linha é recusada sem derrubar a leitura (RN05,
+    SPEC §8 v1.3).
+    """
+    try:
+        return next(csv.reader([texto], delimiter=delimitador))
+    except csv.Error:
+        return None
 
 
 def _montar_ficha(dados: object, origem: str) -> FichaBanco:
