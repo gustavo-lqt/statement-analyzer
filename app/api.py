@@ -1,4 +1,4 @@
-"""U5 — Camada HTTP (SPEC §6.3 a §6.6, ADR-001, CONTRATO.md "app/api.py").
+"""U5 — Camada HTTP (SPEC §6.3 a §6.6, ADR-001).
 
 Camada fina: valida os parâmetros HTTP, chama o motor (leitura → regras → db, ou db →
 consultas) e converte o resultado para JSON. Nenhuma regra de negócio e nenhum SQL aqui.
@@ -42,7 +42,7 @@ app = FastAPI(
     "de análise sobre os lançamentos. Ver docs/SPEC.md.",
 )
 
-# Status HTTP de cada exceção de domínio (CONTRATO.md, tabela de erros).
+# Status HTTP de cada exceção de domínio (erros listados na SPEC §6.3 a §6.5).
 STATUS_POR_ERRO: dict[type[ErroDominio], int] = {
     BancoDesconhecido: 400,
     ArquivoVazio: 422,

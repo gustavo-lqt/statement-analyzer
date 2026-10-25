@@ -1,4 +1,4 @@
-"""Contratos HTTP de app/api.py (SPEC §6.3 a §6.6, CONTRATO.md "app/api.py").
+"""Contratos HTTP de app/api.py (SPEC §6.3 a §6.6).
 
 Testes de integração com TestClient, sem subir servidor. Cada teste usa um banco SQLite
 novo em memória, no lugar de obter_conexao. Os CSVs são montados aqui, com dados
