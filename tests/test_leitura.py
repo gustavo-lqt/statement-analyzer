@@ -447,6 +447,49 @@ def test_ler_linha_com_numero_de_celulas_diferente_e_truncada(banco_a, linha_rui
     assert linhas[1].erro is None
 
 
+@pytest.mark.parametrize(
+    "linha_ruim", ["01/09/2026;PAG*MERC\rCENTRAL;-18,40", "01/09/2026;PAG*MERC CENTRAL\r;-18,40"]
+)
+def test_ler_cr_solto_fora_de_aspas_e_linha_truncada(banco_a, linha_ruim):
+    """SPEC §8 (v1.3) / RN05: \\r solto fora de aspas é quebra de linha corrompida → só aquela
+    linha sai LINHA_TRUNCADA, e a leitura continua."""
+    conteudo = (
+        f"Data;Histórico;Valor\n{linha_ruim}\n06/09/2026;IFD*IFOOD;-42,10\n".encode("latin-1")
+    )
+
+    linhas = _ler(conteudo, banco_a)
+
+    assert linhas[0] == _recusada(2, linha_ruim, MotivoRecusa.LINHA_TRUNCADA)
+    assert linhas[1].numero == 3
+    assert linhas[1].erro is None
+
+
+def test_ler_cr_dentro_de_aspas_continua_parte_da_celula(banco_a):
+    """SPEC §8 (v1.3): entre aspas, o \\r é conteúdo da célula, não quebra de linha."""
+    conteudo = 'Data;Histórico;Valor\n01/09/2026;"PAG*MERC\rCENTRAL";-18,40\n'.encode("latin-1")
+
+    assert _ler(conteudo, banco_a)[0].campos["descricao"] == "PAG*MERC\rCENTRAL"
+
+
+def test_ler_cr_solto_no_cabecalho_recusa_as_linhas_como_coluna_ausente(banco_a):
+    """SPEC §8 (v1.3) / RN05: cabeçalho com \\r solto não tem as colunas da ficha → as linhas de
+    dados saem COLUNA_AUSENTE, sem derrubar a leitura."""
+    conteudo = "Data;Hist\rórico;Valor\n01/09/2026;SALARIO;5.800,00\n".encode("latin-1")
+
+    assert _ler(conteudo, banco_a) == [
+        _recusada(2, "01/09/2026;SALARIO;5.800,00", MotivoRecusa.COLUNA_AUSENTE)
+    ]
+
+
+def test_ler_arquivo_que_so_usa_cr_como_quebra_levanta_arquivo_vazio(banco_a):
+    """SPEC §8 (v1.3) / CONTRATO ler, regra 1: só \\n e \\r\\n quebram linha. Um arquivo que usa só
+    \\r é uma linha só, o cabeçalho, sem nenhuma linha de dados → ArquivoVazio."""
+    conteudo = "Data;Histórico;Valor\r01/09/2026;SALARIO;5.800,00\r".encode("latin-1")
+
+    with pytest.raises(ArquivoVazio):
+        _ler(conteudo, banco_a)
+
+
 def test_ler_cabecalho_sem_coluna_da_ficha_recusa_todas_as_linhas(banco_a):
     """CONTRATO ler, regra 6: cabeçalho sem a coluna "Histórico" → toda linha de dados sai com
     COLUNA_AUSENTE, inclusive a que também teria o número errado de células."""

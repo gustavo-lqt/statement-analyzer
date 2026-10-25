@@ -144,6 +144,28 @@ def test_post_extrato_com_linhas_ruins_aceita_as_demais(cliente: TestClient) -> 
     ]
 
 
+@pytest.mark.parametrize(
+    "linha_ruim, motivo",
+    [
+        ("03/09/2026;PAG*MERC\rCENTRAL;-92,40", "LINHA_TRUNCADA"),
+        ("03/09/2026;PAG*MERC CENTRAL;-1²", "VALOR_INVALIDO"),
+    ],
+)
+def test_post_extrato_com_caractere_que_quebrava_o_motor_recusa_so_a_linha(
+    cliente: TestClient, linha_ruim: str, motivo: str
+) -> None:
+    """§6.3, RN05: \\r solto fora de aspas (SPEC §8 v1.3) e dígito não ASCII (PR #18) recusam
+    só a linha, em vez de derrubar o envio com 500."""
+    conteudo = csv_banco_a("01/09/2026;SALARIO;5.800,00", linha_ruim)
+
+    resposta = enviar(cliente, conteudo, "banco-a")
+
+    assert resposta.status_code == 201
+    corpo = resposta.json()
+    assert (corpo["aceitos"], corpo["rejeitados"]) == (1, 1)
+    assert [(r["linha"], r["motivo"]) for r in corpo["recusas"]] == [(3, motivo)]
+
+
 def test_post_extrato_sem_saldo_inicial_devolve_null(cliente: TestClient) -> None:
     """§6.3, RN07, D3: saldo_inicial_centavos é opcional e sai null quando não informado."""
     resposta = enviar(cliente, EXTRATO_REFERENCIA, "banco-b")
